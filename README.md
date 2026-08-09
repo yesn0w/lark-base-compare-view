@@ -25,6 +25,12 @@ and these staged comparison controls:
 - Share saved extension configuration through the official bridge data store.
   This is the only write operation and never writes Base business data.
 
+## Interface example
+
+English interface in dark appearance:
+
+![Compare View English interface](docs/assets/compare-view-en.png)
+
 ## Security
 
 This public repository intentionally contains no Feishu deployment binding or
