@@ -4,29 +4,48 @@ Chinese version: [PRODUCT.zh-CN.md](PRODUCT.zh-CN.md).
 
 ## Goal
 
-Compare multiple records from the current Feishu Base view without modifying
-the table. Conventional Base presentation maps records to rows and fields to
-columns; Compare View renders fields vertically and selected records
-horizontally.
+Compare records from the current Feishu Base table without modifying the table.
+Conventional Base presentation maps records to rows and fields to columns;
+Compare View renders fields vertically and saved records horizontally.
 
-## MVP behavior
+## Behavior
 
-- Read the current table and current view where the SDK makes them available.
-- List records visible to that view and let the user select 1–10 records.
-- Render the field matrix as soon as at least one record is selected.
-- Use the first ordered field as the primary-field display fallback because the
-  installed SDK does not expose an explicit primary-field flag.
-- Display all non-primary fields by default; users can show the primary field
-  or hide any other field.
-- Reorder selected records with accessible arrow controls.
-- Render empty cells as `—`, retain a fixed field-name column, and support
-  horizontal scrolling.
-- Provide a Chinese/English session-only language selector.
-- Follow the current Feishu light/dark appearance and update when the host
-  appearance changes, without persisting a local preference.
+- The candidate source is the whole current table. The current view’s visible
+  record order comes first; remaining records follow in primary-field order.
+- Select 1–10 records in a single candidate list. Each selected row has a
+  drag handle before its checkbox. Dragging changes saved comparison order; a
+  separate selected-record list is intentionally not shown.
+- Default visibility contains all non-primary fields. The primary field is the
+  record-column title and may be shown as a normal matrix row.
+- Filter, sort, group, and field visibility are extension-local controls. They
+  never alter a native Base filter, group, sort, or view setting.
+- A filter removes candidates from the selector but never removes an already
+  saved comparison record. A sort-rule change resets the selected records to
+  the new sort order; drag can then make a manual adjustment.
+- Grouping puts a record in its first normalized value only, so a multi-value
+  field never duplicates a comparison column. Candidate and matrix group
+  sections can be collapsed locally; collapse state is not saved.
+- Empty values render as `—`. The matrix uses SDK-formatted display text when
+  possible and safely degrades for complex cells.
+
+## Save and sharing
+
+All result-affecting controls are drafts. **Save** is the only action that
+updates the comparison matrix; **Discard** restores the last saved
+configuration and **Reset** prepares default values for a later save.
+
+Saved configuration contains selected record IDs, hidden field IDs, filter
+rules, sort rules, and the group field. It is shared through Feishu’s official
+bridge data store. Base edit users may save; read-only users can load the last
+saved configuration. Concurrent saves use last-successful-write behavior.
+
+Chinese/English choice, Feishu appearance, and collapsed groups remain local to
+the current session.
 
 ## Non-goals
 
-The MVP does not edit cells, write Base data, persist comparison settings, add
-a backend or database, implement authentication or automation, or calculate
-field differences.
+Compare View does not edit cells, write Base business data, change native Base
+view settings, add a backend or database, implement authentication or
+automation, calculate field differences, or publish an extension package. The
+only permitted SDK mutation is bridge configuration storage; it is not a Base
+data write.

@@ -4,24 +4,32 @@
 
 ## 数据流
 
-`BaseAdapter` 将飞书 SDK 与 React 隔离。它加载当前选区、数据表、视图、有序字段元数据和可见记录 ID。记录标题在可用时使用 SDK 返回的已格式化主字段字符串。React 层只保存界面状态：选中的记录 ID、隐藏字段 ID、顺序和语言。它通过适配器读取宿主外观，应用浅色或深色呈现，但不持久化主题偏好。
+`BaseAdapter` 将飞书 SDK 与 React 隔离。它加载当前选区、数据表、当前视图、有序字段元数据、可见记录 ID，以及整个数据表的记录 ID 列表。适配器优先保留当前视图顺序，再按已格式化的主字段标题排列其余候选记录。
 
-比较矩阵在渲染时派生生成，绝不会写回、复制到或与多维表格记录一同持久化。
+`useCompareConfig` 维护两份类型化配置：
 
-## 已验证的 SDK 范围
+- **draft（草稿）**驱动选择器与本地筛选/分组/排序控制；
+- **applied（已应用）**驱动矩阵，且只会在 `setData()` 成功后改变。
 
-已安装的 `@lark-opdev/block-bitable-api` 声明提供了本项目使用的读取操作：
+Bridge 载荷带有 schema 版本并限定到当前数据表与视图。它只包含插件设置：所选 ID、隐藏 ID、筛选条件、排序规则和分组字段。`DataChange` 会重新加载共享配置；未保存的本地草稿会被保留，并提示远端发生变更。
 
-- `bitable.base.getSelection()` 和 `getTableById()`
-- `table.getViewById()`、`getName()`，以及 `getViewMetaList()` 回退
-- `view.getFieldMetaList()` 和 `getVisibleRecordIdList()`
-- `table.getCellString()`，并以 `getCellValue()` 作为格式化回退
-- 字段和记录变更监听器，以及 Base 选区变更监听器
-- 用于读取和监听宿主外观的 `bitable.bridge.getTheme()` 和 `onThemeChange()`
+`useFieldValues` 会按需加载查询控制所需的原始字段值。`queryEngine` 是纯函数：规范化值、筛选、稳定排序、将所选记录的手动顺序插入候选列表，并让一条记录最多进入一个分组。`useCellValues` 仍负责矩阵的格式化显示文本。
 
-未导入或调用任何 SDK 写入 API。如果宿主切换视图期间当前选区的视图暂时不可用，适配器会回退到该数据表的第一个可用视图，并在下一次选区事件发生时刷新。
-在普通浏览器预览中如果飞书桥接不可用，主题 Hook 会临时回退到浏览器的配色方案偏好。
+宿主主题和语言属于呈现状态。语言与折叠状态不会写入 Bridge 载荷。
+
+## SDK 边界
+
+已安装的 `@lark-opdev/block-bitable-api` 声明提供了适配器所用的以下操作：
+
+- `bitable.base.getSelection()`、`getTableById()` 和 `getPermission()`；
+- 表格与视图元数据、`getRecordIdList()` 和可见记录 ID；
+- 字段 `getFieldValueList()`，以及原始单元格值回退；
+- `getCellString()`，以及 `getCellValue()` 格式化回退；
+- 表格/Base 变更监听器，以及 Bridge 主题和数据变更监听器；
+- `bitable.bridge.getData()` 和唯一允许的可变操作 `bitable.bridge.setData()`。
+
+没有 SDK 调用会写入 Base 的记录、单元格、字段或视图。如果宿主切换期间当前选区的视图暂时不可用，适配器会回退到该数据表的第一个可用视图，并在下一次选区变更时刷新。
 
 ## 呈现层
 
-`CompareTable` 接收字段元数据、选中记录元数据，以及以字段和记录 ID 为键的格式化显示字符串映射。这样可将复杂单元格类型限制在 SDK 边界处理，避免重新创建飞书原生编辑器。
+`RecordSelector` 将所有可选记录放在同一个列表中。拖动把手只对已选行启用，后面的复选框负责选择。`CompareTable` 接收已保存的字段、已分组的已保存记录和格式化字符串；它负责仅矩阵使用的可折叠分组控制与固定表头。两个组件都不会重建飞书原生编辑器。

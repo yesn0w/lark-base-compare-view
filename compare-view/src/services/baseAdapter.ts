@@ -1,5 +1,9 @@
 import {
   bitable,
+  BridgeEvent,
+  BridgeModule,
+  OperationType,
+  PermissionEntity,
   type IFieldMeta,
   type IWidgetTable,
   type ThemeModeType,
@@ -8,11 +12,13 @@ import type {
   CompareContext,
   CompareField,
   CompareRecord,
+  FieldValueMap,
 } from '../types/compare';
 import { EMPTY_CELL_VALUE, normalizeDisplayValue } from '../utils/cellFormatting';
 
 /** The SDK's generated declaration does not export IWidgetView directly. */
 interface ReadableView {
+  id?: string;
   getFieldMetaList(): Promise<IFieldMeta[]>;
   getVisibleRecordIdList(): Promise<(string | undefined)[]>;
 }
@@ -31,6 +37,8 @@ export const subscribeToHostTheme = (
  */
 export class BaseAdapter {
   private table: IWidgetTable | null = null;
+  private recordIds: string[] = [];
+  private fieldValueCache = new Map<string, Promise<FieldValueMap>>();
 
   private async getCurrentView(
     table: IWidgetTable,
@@ -61,11 +69,13 @@ export class BaseAdapter {
     const table = await bitable.base.getTableById(selection.tableId);
     const view = await this.getCurrentView(table, selection.viewId);
     this.table = table;
+    this.fieldValueCache.clear();
 
-    const [tableName, fieldMetas, visibleRecordIds] = await Promise.all([
+    const [tableName, fieldMetas, visibleRecordIds, allRecordIds] = await Promise.all([
       table.getName(),
       view.getFieldMetaList(),
       view.getVisibleRecordIdList(),
+      table.getRecordIdList(),
     ]);
 
     // The installed SDK exposes ordered field metadata but no primary-field
@@ -77,16 +87,40 @@ export class BaseAdapter {
       isPrimary: index === 0,
     }));
     const primaryFieldId = fields[0]?.id ?? null;
-    const recordIds = visibleRecordIds.filter(
-      (recordId): recordId is string => Boolean(recordId)
+    const availableRecordIds = [
+      ...new Set(allRecordIds.filter((recordId): recordId is string => Boolean(recordId))),
+    ];
+    this.recordIds = availableRecordIds;
+    const loadedRecords = await mapWithConcurrency(availableRecordIds, 12, (id) =>
+      this.getRecord(id, primaryFieldId)
     );
-    const records = await Promise.all(
-      recordIds.map((id) => this.getRecord(id, primaryFieldId))
-    );
+    const recordsById = new Map(loadedRecords.map((record) => [record.id, record]));
+    const availableRecordIdSet = new Set(availableRecordIds);
+    const visibleIds = [
+      ...new Set(
+        visibleRecordIds.filter(
+          (recordId): recordId is string =>
+            typeof recordId === 'string' && availableRecordIdSet.has(recordId)
+        )
+      ),
+    ];
+    const visibleIdSet = new Set(visibleIds);
+    const remainingRecords = availableRecordIds
+      .filter((recordId) => !visibleIdSet.has(recordId))
+      .map((recordId) => recordsById.get(recordId))
+      .filter((record): record is CompareRecord => Boolean(record));
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+    remainingRecords.sort((first, second) => collator.compare(first.title, second.title));
+    const records = [
+      ...visibleIds
+        .map((recordId) => recordsById.get(recordId))
+        .filter((record): record is CompareRecord => Boolean(record)),
+      ...remainingRecords,
+    ];
 
     return {
       tableId: selection.tableId,
-      viewId: selection.viewId,
+      viewId: view.id ?? selection.viewId,
       tableName,
       primaryFieldId,
       fields,
@@ -123,6 +157,72 @@ export class BaseAdapter {
     }
   }
 
+  async getFieldValueMap(fieldId: string): Promise<FieldValueMap> {
+    const table = this.table;
+    if (!table) {
+      throw new Error('Load the current Bitable context before reading field values.');
+    }
+
+    const cached = this.fieldValueCache.get(fieldId);
+    if (cached) {
+      return cached;
+    }
+
+    const valuesPromise = table
+      .getFieldById(fieldId)
+      .then((field) => field.getFieldValueList())
+      .then((entries) =>
+        entries.reduce<FieldValueMap>((values, entry) => {
+          if (entry.record_id) {
+            values[entry.record_id] = entry.value;
+          }
+          return values;
+        }, {})
+      )
+      .catch(async () => {
+        const entries = await mapWithConcurrency(this.recordIds, 12, async (recordId) => [
+          recordId,
+          await table.getCellValue(fieldId, recordId),
+        ] as const);
+        return entries.reduce<FieldValueMap>((values, [recordId, value]) => {
+          values[recordId] = value;
+          return values;
+        }, {});
+      });
+    this.fieldValueCache.set(fieldId, valuesPromise);
+
+    try {
+      return await valuesPromise;
+    } catch (error) {
+      this.fieldValueCache.delete(fieldId);
+      throw error;
+    }
+  }
+
+  async getPersistentData(): Promise<unknown> {
+    return bitable.bridge.getData();
+  }
+
+  /**
+   * The sole write operation in this project. It stores extension UI settings
+   * through the official bridge and never changes Base records, fields, or views.
+   */
+  async setPersistentData(data: Record<string, unknown>): Promise<void> {
+    await bitable.bridge.setData(data);
+  }
+
+  async canEditBase(): Promise<boolean> {
+    return bitable.base.getPermission({
+      entity: PermissionEntity.Base,
+      type: OperationType.Editable,
+    });
+  }
+
+  subscribeToPersistentData(listener: () => void): () => void {
+    const bridge = bitable.bridge as unknown as BridgeModule;
+    return bridge.bind(BridgeEvent.DataChange, listener);
+  }
+
   subscribe(listener: () => void): () => void {
     const table = this.table;
     if (!table) {
@@ -131,6 +231,7 @@ export class BaseAdapter {
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const scheduleRefresh = () => {
+      this.fieldValueCache.clear();
       if (timer !== undefined) {
         clearTimeout(timer);
       }
@@ -155,4 +256,26 @@ export class BaseAdapter {
       unsubscribe.forEach((dispose) => dispose());
     };
   }
+}
+
+async function mapWithConcurrency<T, Result>(
+  values: T[],
+  concurrency: number,
+  mapper: (value: T) => Promise<Result>
+): Promise<Result[]> {
+  const results = new Array<Result>(values.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < values.length) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      results[currentIndex] = await mapper(values[currentIndex]);
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, values.length) }, () => worker())
+  );
+  return results;
 }

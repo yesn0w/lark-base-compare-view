@@ -5,35 +5,49 @@ Chinese version: [ARCHITECTURE.zh-CN.md](ARCHITECTURE.zh-CN.md).
 ## Data flow
 
 `BaseAdapter` isolates the Feishu SDK from React. It loads the active
-selection, table, view, ordered field metadata, and visible record IDs. Record
-headers use the SDK's formatted primary-field string when available. The React
-layer stores only UI state: selected record IDs, hidden field IDs, order, and
-language. It reads the host appearance through the adapter and applies light
-or dark presentation without persisting a theme preference.
+selection, table, current view, ordered field metadata, visible record IDs, and
+the entire table record-ID list. The adapter prioritizes current-view order,
+then orders the remaining candidates by their formatted primary-field title.
 
-The comparison matrix is derived at render time. It is never written back to,
-copied into, or persisted alongside Base records.
+`useCompareConfig` keeps two typed configurations:
 
-## Verified SDK surface
+- **draft** drives the selector and local filter/group/sort controls;
+- **applied** drives the matrix and changes only after `setData()` succeeds.
 
-The installed `@lark-opdev/block-bitable-api` declarations provide the read
-operations used by this project:
+The bridge payload is schema-versioned and scoped to the current table and
+view. It contains only extension settings: selected IDs, hidden IDs, filters,
+sort rules, and a group field. `DataChange` reloads shared configuration;
+unsaved local drafts are retained and report a remote change.
 
-- `bitable.base.getSelection()` and `getTableById()`
-- `table.getViewById()`, `getName()`, and `getViewMetaList()` fallback
-- `view.getFieldMetaList()` and `getVisibleRecordIdList()`
-- `table.getCellString()` with `getCellValue()` as a formatting fallback
-- field and record change listeners plus Base selection change listening
-- `bitable.bridge.getTheme()` and `onThemeChange()` for host appearance
+`useFieldValues` loads raw field values lazily for query controls.
+`queryEngine` is pure: it normalizes values, filters, stably sorts, inserts the
+manual selected-record order into the candidate list, and places a record in at
+most one group. `useCellValues` remains responsible for formatted matrix text.
 
-No SDK write API is imported or called. If the active selection's view is
-temporarily unavailable during a host view switch, the adapter falls back to
-the table's first available view and refreshes on the next selection event.
-When the Feishu bridge is unavailable in a standalone browser preview, the
-theme hook temporarily falls back to the browser's color-scheme preference.
+The host theme and language are presentational state. Language and collapse
+state never enter the bridge payload.
+
+## SDK boundary
+
+The installed `@lark-opdev/block-bitable-api` declarations provide these
+operations used by the adapter:
+
+- `bitable.base.getSelection()`, `getTableById()`, and `getPermission()`;
+- table and view metadata, `getRecordIdList()`, and visible record IDs;
+- field `getFieldValueList()` with a raw-cell fallback;
+- `getCellString()` with `getCellValue()` formatting fallback;
+- table/base change listeners plus bridge theme and data-change listeners;
+- `bitable.bridge.getData()` and the single allowed mutation,
+  `bitable.bridge.setData()`.
+
+No SDK call writes a Base record, cell, field, or view. If the active selection
+view is temporarily unavailable during a host switch, the adapter falls back to
+the table’s first available view and refreshes on the next selection event.
 
 ## Presentation
 
-`CompareTable` receives field metadata, selected record metadata, and a map of
-formatted display strings keyed by field and record IDs. This keeps complex
-cell types at the SDK boundary and avoids recreating Feishu native editors.
+`RecordSelector` contains every selectable record in one list. Its draggable
+handle is enabled only for selected rows, while the following checkbox controls
+selection. `CompareTable` receives saved fields, grouped saved records, and
+formatted strings; it owns matrix-only collapsible group controls and sticky
+headers. Neither component recreates Feishu native editors.
