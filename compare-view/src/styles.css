@@ -1,6 +1,4 @@
 :root {
-  color: #1f2329;
-  background: #f5f6f7;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -28,14 +26,52 @@ button:disabled {
 }
 
 .compare-view {
+  --view-background: #f5f6f7;
+  --view-text: #1f2329;
+  --view-muted-text: #646a73;
+  --view-subtle-text: #8f959e;
+  --view-surface: #fff;
+  --view-surface-muted: #f8f9fa;
+  --view-border: #e5e6e8;
+  --view-control-border: #d0d3d6;
+  --view-accent: #3370ff;
+  --view-accent-text: #fff;
+  --view-accent-surface: #eef3ff;
+  --view-hover: #f5f6f7;
+  --view-table-hover: #f8faff;
+  --view-shadow: rgb(31 35 41 / 4%);
+  background: var(--view-background);
+  color: var(--view-text);
   min-height: 100vh;
   padding: 24px;
+}
+
+.compare-view[data-theme="light"] {
+  color-scheme: light;
+}
+
+.compare-view[data-theme="dark"] {
+  --view-background: #17191d;
+  --view-text: #f5f6f7;
+  --view-muted-text: #b7bdc6;
+  --view-subtle-text: #9098a3;
+  --view-surface: #24272d;
+  --view-surface-muted: #2b2f36;
+  --view-border: #424852;
+  --view-control-border: #59616c;
+  --view-accent: #77a0ff;
+  --view-accent-text: #111722;
+  --view-accent-surface: #293f72;
+  --view-hover: #30353d;
+  --view-table-hover: #29364f;
+  --view-shadow: rgb(0 0 0 / 24%);
+  color-scheme: dark;
 }
 
 .compare-view--loading {
   display: grid;
   place-items: center;
-  color: #646a73;
+  color: var(--view-muted-text);
 }
 
 .app-header {
@@ -58,12 +94,12 @@ button:disabled {
 }
 
 .app-header p:not(.eyebrow) {
-  color: #646a73;
+  color: var(--view-muted-text);
   margin-top: 4px;
 }
 
 .eyebrow {
-  color: #8f959e;
+  color: var(--view-subtle-text);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -82,10 +118,10 @@ button:disabled {
 .primary-button,
 .text-button,
 .icon-button {
-  border: 1px solid #d0d3d6;
+  border: 1px solid var(--view-control-border);
   border-radius: 6px;
-  background: #fff;
-  color: #1f2329;
+  background: var(--view-surface);
+  color: var(--view-text);
 }
 
 .language-picker select,
@@ -97,14 +133,14 @@ button:disabled {
 }
 
 .primary-button {
-  background: #3370ff;
-  border-color: #3370ff;
-  color: #fff;
+  background: var(--view-accent);
+  border-color: var(--view-accent);
+  color: var(--view-accent-text);
 }
 
 .text-button {
   border: 0;
-  color: #3370ff;
+  color: var(--view-accent);
   padding-inline: 0;
 }
 
@@ -119,10 +155,10 @@ button:disabled {
 .control-panel,
 .compare-table-section,
 .empty-state {
-  border: 1px solid #e5e6e8;
+  border: 1px solid var(--view-border);
   border-radius: 10px;
-  background: #fff;
-  box-shadow: 0 1px 2px rgb(31 35 41 / 4%);
+  background: var(--view-surface);
+  box-shadow: 0 1px 2px var(--view-shadow);
 }
 
 .control-panel {
@@ -148,7 +184,7 @@ button:disabled {
 .control-panel__heading p,
 .control-panel__empty,
 .control-panel__limit {
-  color: #646a73;
+  color: var(--view-muted-text);
   font-size: 13px;
 }
 
@@ -157,7 +193,7 @@ button:disabled {
 }
 
 .control-panel__label {
-  color: #646a73;
+  color: var(--view-muted-text);
   font-size: 12px;
   font-weight: 600;
 }
@@ -215,14 +251,14 @@ button:disabled {
 }
 
 .selector-list__item:hover {
-  background: #f5f6f7;
+  background: var(--view-hover);
 }
 
 .field-tag {
   margin-left: auto;
   border-radius: 999px;
-  background: #eef3ff;
-  color: #3370ff;
+  background: var(--view-accent-surface);
+  color: var(--view-accent);
   font-size: 11px;
   font-weight: 500;
   padding: 2px 6px;
@@ -237,8 +273,8 @@ button:disabled {
 
 .table-status {
   margin: 0;
-  border-bottom: 1px solid #e5e6e8;
-  color: #646a73;
+  border-bottom: 1px solid var(--view-border);
+  color: var(--view-muted-text);
   font-size: 13px;
   padding: 8px 14px;
 }
@@ -258,8 +294,8 @@ button:disabled {
 
 .compare-table th,
 .compare-table td {
-  border-bottom: 1px solid #e5e6e8;
-  border-right: 1px solid #e5e6e8;
+  border-bottom: 1px solid var(--view-border);
+  border-right: 1px solid var(--view-border);
   min-width: 180px;
   padding: 10px 12px;
   text-align: left;
@@ -271,7 +307,7 @@ button:disabled {
   position: sticky;
   top: 0;
   z-index: 2;
-  background: #f8f9fa;
+  background: var(--view-surface-muted);
   font-weight: 600;
 }
 
@@ -280,13 +316,13 @@ button:disabled {
   left: 0;
   z-index: 1;
   min-width: 180px;
-  background: #fff;
-  box-shadow: 1px 0 0 #e5e6e8;
+  background: var(--view-surface);
+  box-shadow: 1px 0 0 var(--view-border);
 }
 
 .compare-table thead .compare-table__field-header {
   z-index: 3;
-  background: #f8f9fa;
+  background: var(--view-surface-muted);
 }
 
 .compare-table tbody tr:last-child th,
@@ -296,7 +332,7 @@ button:disabled {
 
 .compare-table tbody tr:hover td,
 .compare-table tbody tr:hover .compare-table__field-header {
-  background: #f8faff;
+  background: var(--view-table-hover);
 }
 
 .empty-state {
@@ -316,7 +352,7 @@ button:disabled {
 }
 
 .empty-state p {
-  color: #646a73;
+  color: var(--view-muted-text);
   margin-top: 8px;
 }
 

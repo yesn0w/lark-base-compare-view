@@ -22,6 +22,7 @@ changing the underlying Base data.
 - Do not add a backend, database, login flow, automation, or state-management dependency.
 - Keep comparison UI state in React only; do not save it to Base.
 - Support 1–10 selected records, horizontal scrolling, field visibility, and record ordering.
+- Follow the current Feishu light/dark appearance without storing a separate theme preference.
 
 ## Security
 

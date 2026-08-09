@@ -12,8 +12,8 @@ current view as a comparison matrix:
 | Memory | 16 GB | 24 GB |
 
 The UI supports Chinese and English, field visibility, record selection and
-ordering, a sticky field column, horizontal scrolling, and safe display
-fallbacks for complex values.
+ordering, a sticky field column, horizontal scrolling, safe display fallbacks
+for complex values, and the current Feishu light/dark appearance.
 
 ## Security
 

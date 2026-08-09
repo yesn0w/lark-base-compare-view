@@ -5,6 +5,7 @@ import { FieldSelector } from './components/FieldSelector';
 import { RecordSelector } from './components/RecordSelector';
 import { useCellValues } from './hooks/useCellValues';
 import { useCompareContext } from './hooks/useCompareContext';
+import { useFeishuTheme } from './hooks/useFeishuTheme';
 import { getInitialLocale, translate } from './i18n';
 import type { CompareRecord, UiLocale } from './types/compare';
 import {
@@ -23,6 +24,7 @@ export const App = () => {
   const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
   const [hiddenFieldIds, setHiddenFieldIds] = useState<Set<string>>(new Set());
   const contextIdentity = useRef<string | null>(null);
+  const theme = useFeishuTheme();
   const { status, context, adapter, reload } = useCompareContext();
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
     translate(locale, key, values);
@@ -98,7 +100,7 @@ export const App = () => {
   if (!context) {
     if (status === 'error') {
       return (
-        <main className="compare-view">
+        <main className="compare-view" data-theme={theme}>
           <EmptyState
             title={t('unavailableTitle')}
             description={t('unavailableDescription')}
@@ -113,7 +115,11 @@ export const App = () => {
     }
 
     return (
-      <main className="compare-view compare-view--loading" aria-live="polite">
+      <main
+        className="compare-view compare-view--loading"
+        data-theme={theme}
+        aria-live="polite"
+      >
         <p>{t('loading')}</p>
       </main>
     );
@@ -141,7 +147,7 @@ export const App = () => {
   );
 
   return (
-    <main className="compare-view">
+    <main className="compare-view" data-theme={theme}>
       <header className="app-header">
         <div>
           <p className="eyebrow">{context.tableName}</p>

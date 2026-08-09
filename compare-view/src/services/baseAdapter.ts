@@ -2,6 +2,7 @@ import {
   bitable,
   type IFieldMeta,
   type IWidgetTable,
+  type ThemeModeType,
 } from '@lark-opdev/block-bitable-api';
 import type {
   CompareContext,
@@ -15,6 +16,14 @@ interface ReadableView {
   getFieldMetaList(): Promise<IFieldMeta[]>;
   getVisibleRecordIdList(): Promise<(string | undefined)[]>;
 }
+
+export type HostTheme = ThemeModeType;
+
+export const getHostTheme = (): Promise<HostTheme> => bitable.bridge.getTheme();
+
+export const subscribeToHostTheme = (
+  listener: (theme: HostTheme) => void
+): (() => void) => bitable.bridge.onThemeChange(({ data }) => listener(data.theme));
 
 /**
  * Keeps the React layer independent of the Feishu SDK. This adapter only uses

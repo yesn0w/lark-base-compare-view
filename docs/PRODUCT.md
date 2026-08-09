@@ -22,6 +22,8 @@ horizontally.
 - Render empty cells as `—`, retain a fixed field-name column, and support
   horizontal scrolling.
 - Provide a Chinese/English session-only language selector.
+- Follow the current Feishu light/dark appearance and update when the host
+  appearance changes, without persisting a local preference.
 
 ## Non-goals
 

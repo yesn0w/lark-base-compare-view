@@ -50,6 +50,8 @@ npm run check:opdev
 - Select, deselect, and reorder 1–10 records.
 - Hide and restore fields, including the primary field.
 - Check text, select, date, number, relation, person, and attachment values.
+- Switch Feishu between light and dark appearance and confirm the view updates
+  without a reload.
 - Change a Base record or field and confirm the extension refreshes.
 - Check five horizontal record columns and a view containing roughly 100
   records for usable scrolling and selector behavior.
