@@ -21,7 +21,7 @@ changing the underlying Base data.
 - Read only: never call SDK `set*`, `add*`, `delete*`, upload, or persistence APIs.
 - Do not add a backend, database, login flow, automation, or state-management dependency.
 - Keep comparison UI state in React only; do not save it to Base.
-- Support 2–10 selected records, horizontal scrolling, field visibility, and record ordering.
+- Support 1–10 selected records, horizontal scrolling, field visibility, and record ordering.
 
 ## Security
 

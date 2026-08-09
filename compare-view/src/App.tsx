@@ -7,7 +7,12 @@ import { useCellValues } from './hooks/useCellValues';
 import { useCompareContext } from './hooks/useCompareContext';
 import { getInitialLocale, translate } from './i18n';
 import type { CompareRecord, UiLocale } from './types/compare';
-import { MAX_COMPARE_RECORDS, moveRecordId, toggleId } from './utils/compareState';
+import {
+  MAX_COMPARE_RECORDS,
+  MIN_COMPARE_RECORDS,
+  moveRecordId,
+  toggleId,
+} from './utils/compareState';
 
 function sameItems(first: Set<string>, second: Set<string>): boolean {
   return first.size === second.size && [...first].every((item) => second.has(item));
@@ -121,8 +126,8 @@ export const App = () => {
     />
   ) : !context.records.length ? (
     <EmptyState title={t('noRecords')} description={t('recordsHint')} />
-  ) : selectedRecords.length < 2 ? (
-    <EmptyState title={t('selectAtLeastTwo')} description={t('recordsHint')} />
+  ) : selectedRecords.length < MIN_COMPARE_RECORDS ? (
+    <EmptyState title={t('selectAtLeastOne')} description={t('recordsHint')} />
   ) : !visibleFields.length ? (
     <EmptyState title={t('noVisibleFields')} description={t('fieldsHint')} />
   ) : (

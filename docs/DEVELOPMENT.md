@@ -47,7 +47,7 @@ npm run check:opdev
 
 - Confirm the active table and current view load.
 - Confirm visible records, fields, and primary-field column titles load.
-- Select, deselect, and reorder 2–10 records.
+- Select, deselect, and reorder 1–10 records.
 - Hide and restore fields, including the primary field.
 - Check text, select, date, number, relation, person, and attachment values.
 - Change a Base record or field and confirm the extension refreshes.

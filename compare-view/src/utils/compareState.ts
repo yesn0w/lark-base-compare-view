@@ -1,3 +1,4 @@
+export const MIN_COMPARE_RECORDS = 1;
 export const MAX_COMPARE_RECORDS = 10;
 
 export function moveRecordId(

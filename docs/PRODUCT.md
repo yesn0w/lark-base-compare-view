@@ -12,7 +12,8 @@ horizontally.
 ## MVP behavior
 
 - Read the current table and current view where the SDK makes them available.
-- List records visible to that view and let the user select up to 10.
+- List records visible to that view and let the user select 1–10 records.
+- Render the field matrix as soon as at least one record is selected.
 - Use the first ordered field as the primary-field display fallback because the
   installed SDK does not expose an explicit primary-field flag.
 - Display all non-primary fields by default; users can show the primary field
