@@ -5,6 +5,7 @@ interface FieldSelectorProps {
   locale: UiLocale;
   fields: CompareField[];
   hiddenFieldIds: Set<string>;
+  disabled?: boolean;
   onToggle: (fieldId: string) => void;
   onShowAll: () => void;
   onHideAll: () => void;
@@ -14,6 +15,7 @@ export function FieldSelector({
   locale,
   fields,
   hiddenFieldIds,
+  disabled = false,
   onToggle,
   onShowAll,
   onHideAll,
@@ -28,10 +30,10 @@ export function FieldSelector({
       </div>
 
       <div className="field-actions">
-        <button type="button" className="text-button" onClick={onShowAll}>
+        <button type="button" className="text-button" disabled={disabled} onClick={onShowAll}>
           {t('showAll')}
         </button>
-        <button type="button" className="text-button" onClick={onHideAll}>
+        <button type="button" className="text-button" disabled={disabled} onClick={onHideAll}>
           {t('hideAll')}
         </button>
       </div>
@@ -42,6 +44,7 @@ export function FieldSelector({
             <input
               type="checkbox"
               checked={!hiddenFieldIds.has(field.id)}
+              disabled={disabled}
               onChange={() => onToggle(field.id)}
             />
             <span>{field.name}</span>
