@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CompareTable } from './components/CompareTable';
 import { EmptyState } from './components/EmptyState';
-import { FieldSelector } from './components/FieldSelector';
-import { FilterBuilder } from './components/FilterBuilder';
-import { GroupSelector } from './components/GroupSelector';
+import { QueryToolbar } from './components/QueryToolbar';
 import { RecordSelector } from './components/RecordSelector';
-import { SortBuilder } from './components/SortBuilder';
 import { useCellValues } from './hooks/useCellValues';
 import { useCompareConfig } from './hooks/useCompareConfig';
 import { useCompareContext } from './hooks/useCompareContext';
@@ -309,32 +306,28 @@ export const App = () => {
         </div>
       </div>
 
-      <div className="query-grid">
-        <FilterBuilder
+      <QueryToolbar
           locale={locale}
           fields={context.fields}
           filters={draft?.filters ?? { conjunction: 'and', rules: [] }}
+          sortRules={draft?.sortRules ?? []}
+          groupFieldId={draft?.groupFieldId ?? null}
+          hiddenFieldIds={new Set(draft?.hiddenFieldIds ?? [])}
           fieldValues={fieldValues.values}
           disabled={controlsDisabled}
-          onChange={(filters) => config.updateDraft((current) => ({ ...current, filters }))}
-        />
-        <SortBuilder
-          locale={locale}
-          fields={context.fields}
-          sortRules={draft?.sortRules ?? []}
-          disabled={controlsDisabled}
-          onChange={updateSortRules}
-        />
-        <GroupSelector
-          locale={locale}
-          fields={context.fields}
-          groupFieldId={draft?.groupFieldId ?? null}
-          disabled={controlsDisabled}
-          onChange={(groupFieldId) =>
+          onFiltersChange={(filters) =>
+            config.updateDraft((current) => ({ ...current, filters }))
+          }
+          onSortRulesChange={updateSortRules}
+          onGroupFieldChange={(groupFieldId) =>
             config.updateDraft((current) => ({ ...current, groupFieldId }))
           }
-        />
-      </div>
+          onToggleField={(fieldId) =>
+            updateHiddenFields((current) => [...toggleId(new Set(current), fieldId)])
+          }
+          onShowAllFields={() => updateHiddenFields(() => [])}
+          onHideAllFields={() => updateHiddenFields(() => context.fields.map((field) => field.id))}
+      />
 
       <div className="control-grid">
         <RecordSelector
@@ -359,15 +352,6 @@ export const App = () => {
           onToggleGroup={(groupKey) =>
             setCandidateCollapsedGroups((current) => toggleGroupKey(current, groupKey))
           }
-        />
-        <FieldSelector
-          locale={locale}
-          fields={context.fields}
-          hiddenFieldIds={new Set(draft?.hiddenFieldIds ?? [])}
-          disabled={controlsDisabled}
-          onToggle={(fieldId) => updateHiddenFields((current) => [...toggleId(new Set(current), fieldId)])}
-          onShowAll={() => updateHiddenFields(() => [])}
-          onHideAll={() => updateHiddenFields(() => context.fields.map((field) => field.id))}
         />
       </div>
 
