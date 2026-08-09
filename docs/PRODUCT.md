@@ -1,5 +1,7 @@
 # Product: Compare View
 
+Chinese version: [PRODUCT.zh-CN.md](PRODUCT.zh-CN.md).
+
 ## Goal
 
 Compare multiple records from the current Feishu Base view without modifying

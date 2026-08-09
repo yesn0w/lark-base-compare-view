@@ -1,5 +1,7 @@
 # Compare View extension
 
+Chinese version: [README.zh-CN.md](README.zh-CN.md).
+
 This directory is the Feishu Data Table View Extension generated from the
 official React + TypeScript + Webpack template.
 

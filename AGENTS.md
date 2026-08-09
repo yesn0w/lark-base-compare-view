@@ -1,5 +1,7 @@
 # lark-base-compare-view
 
+Chinese version: [AGENTS.zh-CN.md](AGENTS.zh-CN.md).
+
 ## Purpose
 
 This repository implements **Compare View**, a Feishu/Lark Base Data Table View
@@ -26,6 +28,16 @@ changing the underlying Base data.
 - Never commit `app.json`, `compare-view/block.json`, `debug.json`, `.env`, tokens, or secrets.
 - Commit only the corresponding `.example` files with placeholders.
 - App Secret values are never needed by this frontend extension source tree.
+
+## Documentation
+
+- Treat unsuffixed Markdown files as English and Chinese Markdown files as
+  `<name>.zh-CN.md`.
+- Maintain Chinese counterparts for user-facing and maintainer-facing
+  documentation, keeping commands, paths, configuration keys, and behavior in
+  sync.
+- Put a link to the counterpart near the top of each paired document. Internal
+  links in each version must point to the same-language counterpart.
 
 ## Verification
 

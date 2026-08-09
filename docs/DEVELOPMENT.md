@@ -1,5 +1,7 @@
 # Development and host verification
 
+Chinese version: [DEVELOPMENT.zh-CN.md](DEVELOPMENT.zh-CN.md).
+
 ## Local configuration
 
 The repository does not track its Feishu application binding. Copy

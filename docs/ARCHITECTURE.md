@@ -1,5 +1,7 @@
 # Architecture
 
+Chinese version: [ARCHITECTURE.zh-CN.md](ARCHITECTURE.zh-CN.md).
+
 ## Data flow
 
 `BaseAdapter` isolates the Feishu SDK from React. It loads the active

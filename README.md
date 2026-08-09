@@ -1,5 +1,7 @@
 # Lark Base Compare View
 
+Chinese version: [README.zh-CN.md](README.zh-CN.md).
+
 Compare View is a read-only Feishu/Lark Base Data Table View Extension for
 side-by-side record comparison. Instead of changing Base data, it renders the
 current view as a comparison matrix:
