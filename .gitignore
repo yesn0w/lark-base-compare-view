@@ -1,0 +1,16 @@
+# Local Feishu application binding. Keep real identifiers and debug targets out of Git.
+/app.json
+/compare-view/block.json
+/compare-view/debug.json
+
+# Node and build artifacts
+node_modules/
+compare-view/node_modules/
+compare-view/dist/
+coverage/
+
+# Local tooling and operating-system files
+.DS_Store
+.env
+.env.*
+!.env.example
