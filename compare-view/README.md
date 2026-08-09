@@ -1,44 +1,8 @@
-# demo
+# Compare View extension
 
-## 文件目录说明
+This directory is the Feishu Data Table View Extension generated from the
+official React + TypeScript + Webpack template.
 
-```ts
-.
-├── config // webpack 配置文件目录
-│   └── webpack.config.ts // webpack 配置文件
-├── package.json
-├── public
-│   └── index.html
-├── src
-│   ├── App.tsx // 主要组件
-│   ├── render_helper.ts // 渲染 cellValue 方法
-│   ├── index.tsx // 入口文件
-│   └── utils.ts // 工具方法
-├── block.json // 小组件元信息
-├── README.md // 说明文件
-└── tsconfig.json // ts config
-```
-
-## 安装依赖
-
-```sh
-npm / yarn / pnpm install
-```
-
-## 启动
-
-```sh
-npm run dev
-```
-
-## 打包
-
-```sh
-npm run build
-```
-
-## 发布
-
-```sh
-npm run upload
-```
+Use the root [README](../README.md) for setup, local configuration, validation,
+and release boundaries. `block.json` is intentionally local and ignored by Git;
+copy `block.json.example` before starting the development server.

@@ -1,17 +1,66 @@
 # Lark Base Compare View
 
-This repository starts from the official Feishu/Lark Base **Data Table View**
-React + TypeScript + Webpack template. It is a sanitized baseline for the
-Compare View extension.
+Compare View is a read-only Feishu/Lark Base Data Table View Extension for
+side-by-side record comparison. Instead of changing Base data, it renders the
+current view as a comparison matrix:
 
-The real application binding is intentionally local:
+| Field | Record A | Record B |
+| --- | --- | --- |
+| CPU | M4 | M4 Pro |
+| Memory | 16 GB | 24 GB |
+
+The UI supports Chinese and English, field visibility, record selection and
+ordering, a sticky field column, horizontal scrolling, and safe display
+fallbacks for complex values.
+
+## Security
+
+This public repository intentionally contains no Feishu deployment binding or
+secret. Copy the example files locally and keep the real files untracked:
 
 ```sh
 cp app.json.example app.json
 cp compare-view/block.json.example compare-view/block.json
 ```
 
-Replace the placeholders in the copied files. Do not commit App Secret values,
-debug Base URLs, or deployment identifiers.
+Fill in App ID, BlockTypeID, and a debug Base URL in those local files. Do not
+put an App Secret in this project; rotate any value that has been exposed.
 
-The next commit implements the read-only comparison experience.
+## Development
+
+1. Create a Feishu enterprise custom app with the **Bitable Extension → Data
+   Table View** capability.
+2. Use the official CLI to log in: `opdev login` and choose `Feishu`.
+3. Create the two local configuration files above.
+4. Install and run the extension:
+
+   ```sh
+   cd compare-view
+   npm install
+   npm run start
+   ```
+
+`compare-view/.npmrc` serializes lifecycle scripts because the official
+Webpack utility depends on an older opdev package that otherwise races under
+recent npm versions.
+
+For the MVP, request only the least Feishu Base permission needed for the
+read APIs used by the extension (normally the read-only Bitable user-access
+scope); verify the exact requirement in the current Feishu console before
+publishing.
+
+## Checks
+
+```sh
+cd compare-view
+npm run typecheck
+npm run build
+```
+
+`npm run upload` remains available from the official template but is outside
+this MVP's release scope. See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for
+the host-environment checklist.
+
+## License
+
+[MIT](LICENSE) © 2026 yesn0w.

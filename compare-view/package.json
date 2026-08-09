@@ -1,24 +1,23 @@
 {
-  "name": "@bitable/board-view-demo",
+  "name": "@yesn0w/lark-base-compare-view",
   "version": "0.1.0",
+  "private": true,
   "scripts": {
     "dev": "cross-env NODE_ENV=development webpack-dev-server --mode development --config ./config/webpack.config.js",
     "start": "npm run dev",
-    "build": "cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run typecheck && cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
     "upload": "npm run build && opdev upload ./dist"
   },
   "dependencies": {
-    "@douyinfe/semi-ui": "^2.86.0",
     "@lark-opdev/block-bitable-api": "^0.1.2",
-    "lodash-es": "^4.17.21",
     "react": "^18.2.0",
-    "react-async-hook": "^4.0.0",
-    "react-dom": "^18.2.0",
-    "react-use": "^17.4.0"
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@lark-opdev/block-bitable-webpack-utils": "^0.1.7",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.5.10",
+    "@types/node": "18.11.9",
     "@types/react": "^18.0.15",
     "@types/react-dom": "^18.0.6",
     "@types/webpack": "^5.28.0",
