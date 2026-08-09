@@ -16,7 +16,7 @@ creating a sample Base when no URL is configured.
 
 ```sh
 cd compare-view
-npm install
+npm ci
 npm run typecheck
 npm run start
 ```
@@ -24,6 +24,24 @@ npm run start
 The official Webpack development server opens the configured Base with a
 debug-port parameter. Add the local data-table view plugin in the host, then
 open it in a new tab.
+
+The development configuration ignores `node_modules` and polls source changes
+once per second. This avoids native watcher `EMFILE` errors in large dependency
+trees; hot rebuilds can take up to about one second to begin.
+
+## Repair a local installation
+
+If `npm run start` reports `Cannot find module '@bdeefe/feishu-devtools-core/libs/config/env'`, the embedded runtime from the
+official CLI was not retained in `node_modules`. Stop the server and run:
+
+```sh
+cd compare-view
+npm ci
+npm run check:opdev
+```
+
+`npm ci` recreates `node_modules` from `package-lock.json`. Do not use
+`--ignore-scripts`: the CLI needs its `postinstall` recovery step.
 
 ## Host checklist
 

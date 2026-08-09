@@ -12,12 +12,26 @@
 
 ```sh
 cd compare-view
-npm install
+npm ci
 npm run typecheck
 npm run start
 ```
 
 官方 Webpack 开发服务器会使用调试端口参数打开已配置的 Base。请在宿主中添加本地数据表视图插件，再在新标签页中打开它。
+
+开发配置会忽略 `node_modules`，并每秒轮询一次源码变更。这可避免大型依赖树中的原生监视器 `EMFILE` 错误；热重编译开始前最多可能有约一秒延迟。
+
+## 修复本地安装
+
+如果 `npm run start` 报错 `Cannot find module '@bdeefe/feishu-devtools-core/libs/config/env'`，说明官方 CLI 的嵌入式运行时未被保留在 `node_modules` 中。请停止开发服务器并运行：
+
+```sh
+cd compare-view
+npm ci
+npm run check:opdev
+```
+
+`npm ci` 会根据 `package-lock.json` 重新创建 `node_modules`。请勿使用 `--ignore-scripts`：CLI 需要执行其 `postinstall` 恢复步骤。
 
 ## 宿主检查清单
 

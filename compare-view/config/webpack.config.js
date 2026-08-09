@@ -105,6 +105,10 @@ const config = {
       },
     },
   },
+  watchOptions: {
+    ignored: /node_modules/,
+    poll: 1000,
+  },
   devServer: isProduction
     ? undefined
     : {

@@ -38,13 +38,18 @@ put an App Secret in this project; rotate any value that has been exposed.
 
    ```sh
    cd compare-view
-   npm install
+   npm ci
    npm run start
    ```
 
-`compare-view/.npmrc` serializes lifecycle scripts because the official
-Webpack utility depends on an older opdev package that otherwise races under
-recent npm versions.
+`npm ci` recreates the dependency tree from the lockfile. The official CLI
+restores an embedded runtime during its lifecycle scripts, so do not pass
+`--ignore-scripts`. `compare-view/.npmrc` serializes those scripts, and
+`npm run start` verifies the required runtime before starting Webpack.
+
+The development server ignores `node_modules` and polls for source changes once
+per second. This avoids native watcher `EMFILE` failures in large dependency
+trees; hot rebuilds can take up to about one second to begin.
 
 For the MVP, request only the least Feishu Base permission needed for the
 read APIs used by the extension (normally the read-only Bitable user-access

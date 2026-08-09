@@ -31,11 +31,13 @@ cp compare-view/block.json.example compare-view/block.json
 
    ```sh
    cd compare-view
-   npm install
+   npm ci
    npm run start
    ```
 
-`compare-view/.npmrc` 会串行执行生命周期脚本，因为官方 Webpack 工具依赖较旧的 opdev 包，在较新的 npm 版本中并行执行时可能发生竞争。
+`npm ci` 会按锁文件重新创建依赖树。官方 CLI 会在生命周期脚本中恢复嵌入式运行时，因此请勿传入 `--ignore-scripts`。`compare-view/.npmrc` 会串行执行这些脚本，且 `npm run start` 会在启动 Webpack 前验证所需运行时。
+
+开发服务器会忽略 `node_modules`，并每秒轮询一次源码变更。这可避免大型依赖树中的原生监视器 `EMFILE` 错误；热重编译开始前最多可能有约一秒延迟。
 
 对于 MVP，仅申请插件所用读取 API 所需的最小飞书多维表格权限（通常为只读的 Bitable 用户访问权限）；发布前请在最新的飞书控制台中核对确切要求。
 
