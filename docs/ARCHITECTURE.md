@@ -49,8 +49,28 @@ the table’s first available view and refreshes on the next selection event.
 
 ## Presentation
 
-`RecordSelector` contains every selectable record in one list. Its draggable
-handle is enabled only for selected rows, while the following checkbox controls
-selection. `CompareTable` receives saved fields, grouped saved records, and
-formatted strings; it owns matrix-only collapsible group controls and sticky
-headers. Neither component recreates Feishu native editors.
+`QueryToolbar` is the single toolbar. It owns popover placement, outside-pointer
+and Escape dismissal, and the row-height menu, but its open panel is controlled
+by `App` so the empty state can open the records popover. `App` passes the
+records panel and the save actions in as slots, keeping draft and configuration
+wiring out of the toolbar.
+
+`RecordSelector` renders that records panel: every selectable record in one
+list, plus a local search box. Its draggable handle is enabled only for
+selected rows, while the following checkbox controls selection.
+
+`CompareTable` receives saved fields, grouped saved records, formatted strings,
+and the set of differing field IDs. It owns matrix-only collapsible group
+controls, sticky headers, the sticky field column and its resize handle, record
+column reordering and removal, and `CellExpandDialog` for clipped values.
+`StatBar` and `TableSkeleton` are presentational. None of these components
+recreates a Feishu native editor.
+
+`compareDiff` is pure. It compares the formatted display text already loaded by
+`useCellValues`, so difference marking needs no extra SDK call. `App` derives
+the differing-field set once and reuses it for the status bar count, the row
+markers, and the differences-only filter.
+
+`CompareField.kind` collapses the SDK's field types into the shapes the grid
+renders differently. `BaseAdapter` computes it so that `FieldType` stays behind
+the SDK boundary and the React layer stays SDK-free.
