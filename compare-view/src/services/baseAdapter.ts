@@ -71,16 +71,17 @@ export class BaseAdapter {
     this.table = table;
     this.fieldValueCache.clear();
 
-    const [tableName, fieldMetas, visibleRecordIds, allRecordIds] = await Promise.all([
+    const [tableName, tableFieldMetas, visibleRecordIds, allRecordIds] = await Promise.all([
       table.getName(),
-      view.getFieldMetaList(),
+      table.getFieldMetaList(),
       view.getVisibleRecordIdList(),
       table.getRecordIdList(),
     ]);
 
-    // The installed SDK exposes ordered field metadata but no primary-field
-    // marker. Bitable's first field is therefore the safe display fallback.
-    const fields: CompareField[] = fieldMetas.map((meta, index) => ({
+    // The installed SDK exposes no primary-field marker. Table-level metadata
+    // preserves Base's default field order, so its first field is the safe
+    // primary-field display fallback instead of the current view's first field.
+    const fields: CompareField[] = tableFieldMetas.map((meta, index) => ({
       id: meta.id,
       name: meta.name,
       meta,
