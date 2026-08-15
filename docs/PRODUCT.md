@@ -12,11 +12,14 @@ Compare View renders fields vertically and saved records horizontally.
 
 - The candidate source is the whole current table. The current view’s visible
   record order comes first; remaining records follow in primary-field order.
+- Field selection and matrix rows use the table-level default field order; the
+  current view does not reorder fields in Compare View.
 - Select 1–10 records in a single candidate list. Each selected row has a
   drag handle before its checkbox. Dragging changes saved comparison order; a
   separate selected-record list is intentionally not shown.
-- Default visibility contains all non-primary fields. The primary field is the
-  record-column title and may be shown as a normal matrix row.
+- Default visibility contains all non-primary fields. The first table-level
+  field is the primary-field fallback, becomes the record-column title, and
+  may be shown as a normal matrix row.
 - Filter, sort, group, and field visibility are extension-local controls. They
   never alter a native Base filter, group, sort, or view setting.
 - A filter removes candidates from the selector but never removes an already
