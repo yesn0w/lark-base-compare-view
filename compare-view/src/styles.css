@@ -406,9 +406,22 @@ select:disabled {
   z-index: 40;
 }
 
+/* Each popover is sized to its own content rather than to one shared width. */
 .query-popover--records {
   overflow: hidden;
   width: min(320px, calc(100vw - 16px));
+}
+
+.query-popover--group {
+  width: min(300px, calc(100vw - 16px));
+}
+
+.query-popover--field {
+  width: min(340px, calc(100vw - 16px));
+}
+
+.query-popover--sort {
+  width: min(460px, calc(100vw - 16px));
 }
 
 .query-popover--rowHeight {
@@ -507,8 +520,15 @@ select:disabled {
   border: 1px solid var(--control-border);
   border-radius: 6px;
   color: var(--text);
+  min-height: 32px;
   min-width: 0;
-  padding: 5px 7px;
+  padding: 4px 7px;
+}
+
+/* Keep the row's controls aligned once an open option list makes it taller. */
+.query-rule > .icon-button,
+.sort-rule .icon-button {
+  height: 32px;
 }
 
 .query-panel--compact > select {
@@ -527,7 +547,7 @@ select:disabled {
 
 .query-rule,
 .sort-rule {
-  align-items: center;
+  align-items: start;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -537,7 +557,7 @@ select:disabled {
 }
 
 .query-rule {
-  grid-template-columns: minmax(78px, 1fr) minmax(82px, 1fr) minmax(90px, 1fr) 28px;
+  grid-template-columns: minmax(78px, 0.9fr) minmax(82px, 0.8fr) minmax(120px, 1.4fr) 28px;
 }
 
 .sort-rule {
@@ -549,8 +569,88 @@ select:disabled {
   list-style: none;
 }
 
-.query-rule__multiselect {
-  min-height: 56px;
+.value-picker {
+  min-width: 0;
+}
+
+.value-picker__trigger {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--control-border);
+  border-radius: 6px;
+  color: var(--text);
+  display: flex;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 7px;
+  width: 100%;
+}
+
+.value-picker__trigger > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value-picker__trigger--empty > span {
+  color: var(--subtle);
+}
+
+.value-picker__trigger > svg {
+  color: var(--subtle);
+  fill: currentcolor;
+  flex: 0 0 auto;
+  height: 12px;
+  width: 12px;
+}
+
+.value-picker__panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-top: 4px;
+  max-height: 176px;
+  overflow: auto;
+  padding: 4px;
+}
+
+.value-picker__option {
+  align-items: center;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 6px;
+}
+
+.value-picker__option:hover {
+  background: var(--hover);
+}
+
+.value-picker__option input {
+  accent-color: var(--accent-solid);
+  flex: 0 0 auto;
+  height: 14px;
+  margin: 0;
+  width: 14px;
+}
+
+.value-picker__option span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value-picker__empty {
+  color: var(--subtle);
+  font-size: 12px;
+  margin: 0;
+  padding: 6px;
 }
 
 .query-rule__no-value {

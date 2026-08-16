@@ -37,6 +37,9 @@ Compare View renders fields vertically and saved records horizontally.
   may be shown as a normal matrix row.
 - Filter, sort, group, and field visibility are extension-local controls. They
   never alter a native Base filter, group, sort, or view setting.
+- A filter on a select field picks its options from a checkbox list and accepts
+  more than one of them. A record matches only when it satisfies the operator
+  for every chosen option.
 - A filter removes candidates from the selector but never removes an already
   saved comparison record. A sort-rule change resets the selected records to
   the new sort order; drag can then make a manual adjustment.
