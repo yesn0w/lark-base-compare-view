@@ -2,11 +2,19 @@ import type { IFieldMeta } from '@lark-opdev/block-bitable-api';
 
 export type UiLocale = 'zh-CN' | 'en-US';
 
+/**
+ * Presentation-level grouping of Base field types. It lets the React layer pick
+ * a field glyph and a cell style without importing the Feishu SDK enum, which
+ * stays inside `services/baseAdapter.ts`.
+ */
+export type CompareFieldKind = 'text' | 'select' | 'number' | 'date' | 'checkbox';
+
 export interface CompareField {
   id: string;
   name: string;
   meta: IFieldMeta;
   isPrimary: boolean;
+  kind: CompareFieldKind;
 }
 
 export interface CompareRecord {

@@ -58,6 +58,29 @@ export function moveSelectedRecordToCandidatePosition(
   return next;
 }
 
+/**
+ * Reorders a selected record directly against another selected record, which is
+ * how the comparison grid's column handles work. Unlike the candidate-list drag,
+ * both ends are already part of the comparison, so no candidate mapping applies.
+ */
+export function moveSelectedRecordBefore(
+  selectedRecordIds: string[],
+  recordId: string,
+  targetRecordId: string
+): string[] {
+  if (
+    recordId === targetRecordId ||
+    !selectedRecordIds.includes(recordId) ||
+    !selectedRecordIds.includes(targetRecordId)
+  ) {
+    return selectedRecordIds;
+  }
+
+  const next = selectedRecordIds.filter((id) => id !== recordId);
+  next.splice(next.indexOf(targetRecordId), 0, recordId);
+  return next;
+}
+
 /** Resets manual selection order to the current query ordering. */
 export function orderSelectedRecordIdsByRecords(
   selectedRecordIds: string[],

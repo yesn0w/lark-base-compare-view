@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CompareTable } from './components/CompareTable';
 import { EmptyState } from './components/EmptyState';
-import { QueryToolbar } from './components/QueryToolbar';
+import { QueryToolbar, type QueryPanel } from './components/QueryToolbar';
 import { RecordSelector } from './components/RecordSelector';
+import { StatBar } from './components/StatBar';
+import { TableSkeleton } from './components/TableSkeleton';
 import { useCellValues } from './hooks/useCellValues';
 import { useCompareConfig } from './hooks/useCompareConfig';
 import { useCompareContext } from './hooks/useCompareContext';
@@ -10,9 +12,11 @@ import { useFeishuTheme } from './hooks/useFeishuTheme';
 import { useFieldValues } from './hooks/useFieldValues';
 import { getInitialLocale, translate } from './i18n';
 import type { CompareRecord, CompareViewConfig, UiLocale } from './types/compare';
+import { fieldHasDifference } from './utils/compareDiff';
 import {
   MAX_COMPARE_RECORDS,
   MIN_COMPARE_RECORDS,
+  moveSelectedRecordBefore,
   moveSelectedRecordToCandidatePosition,
   orderSelectedRecordIdsByRecords,
   toggleId,
@@ -23,6 +27,7 @@ import {
   mergeSelectedOrderIntoCandidates,
   sortRecords,
 } from './utils/queryEngine';
+import { DEFAULT_ROW_HEIGHT, type RowHeight } from './utils/rowHeight';
 
 function toggleGroupKey(
   current: Set<string>,
@@ -39,6 +44,11 @@ export const App = () => {
   const [locale, setLocale] = useState<UiLocale>(getInitialLocale);
   const [candidateCollapsedGroups, setCandidateCollapsedGroups] = useState<Set<string>>(new Set());
   const [comparisonCollapsedGroups, setComparisonCollapsedGroups] = useState<Set<string>>(new Set());
+  // Row height and the differences-only filter are per-session view preferences.
+  // They are deliberately not part of the persisted compare configuration.
+  const [rowHeight, setRowHeight] = useState<RowHeight>(DEFAULT_ROW_HEIGHT);
+  const [diffOnly, setDiffOnly] = useState(false);
+  const [openPanel, setOpenPanel] = useState<QueryPanel>(null);
   const sortResetKeyRef = useRef<string | null>(null);
   const theme = useFeishuTheme();
   const { status, context, adapter, reload } = useCompareContext();
@@ -130,6 +140,28 @@ export const App = () => {
   const cellValues = useCellValues(adapter, visibleFields, selectedIds);
   const currentSortKey = configSortKey(draft);
 
+  const differingFieldIds = useMemo(
+    () =>
+      new Set(
+        visibleFields
+          .filter((field) => fieldHasDifference(cellValues.values, field.id, selectedIds))
+          .map((field) => field.id)
+      ),
+    [cellValues.values, selectedIds, visibleFields]
+  );
+  const displayFields = useMemo(
+    () => (diffOnly ? visibleFields.filter((field) => differingFieldIds.has(field.id)) : visibleFields),
+    [diffOnly, differingFieldIds, visibleFields]
+  );
+  const pendingRecordIds = useMemo(() => {
+    if (!draft) {
+      return new Set<string>();
+    }
+
+    const draftSelected = new Set(draft.selectedRecordIds);
+    return new Set(selectedIds.filter((recordId) => !draftSelected.has(recordId)));
+  }, [draft, selectedIds]);
+
   useEffect(() => {
     if (!context || !draft || sortResetKeyRef.current !== currentSortKey) {
       return;
@@ -171,6 +203,13 @@ export const App = () => {
     });
   };
 
+  const removeRecord = (recordId: string) => {
+    config.updateDraft((current) => ({
+      ...current,
+      selectedRecordIds: current.selectedRecordIds.filter((id) => id !== recordId),
+    }));
+  };
+
   const updateSortRules = (sortRules: CompareViewConfig['sortRules']) => {
     sortResetKeyRef.current = JSON.stringify(sortRules);
     config.updateDraft((current) => ({ ...current, sortRules }));
@@ -183,7 +222,9 @@ export const App = () => {
     }));
   };
 
-  const controlsDisabled = config.status !== 'ready' || !draft || !config.canSave;
+  // A loaded configuration can always be inspected; only editing needs permission.
+  const configReady = config.status === 'ready' && Boolean(draft);
+  const controlsDisabled = !configReady || !config.canSave;
   const selectedCandidateIdSet = new Set(candidateRecordIds);
   const hiddenSelectedCount = draft
     ? draft.selectedRecordIds.filter((recordId) => !selectedCandidateIdSet.has(recordId)).length
@@ -192,7 +233,7 @@ export const App = () => {
   if (!context) {
     if (status === 'error') {
       return (
-        <main className="compare-view" data-theme={theme}>
+        <main className="compare-view compare-view--message" data-theme={theme}>
           <EmptyState
             title={t('unavailableTitle')}
             description={t('unavailableDescription')}
@@ -207,158 +248,219 @@ export const App = () => {
     }
 
     return (
-      <main className="compare-view compare-view--loading" data-theme={theme} aria-live="polite">
-        <p>{t('loading')}</p>
+      <main className="compare-view compare-view--message" data-theme={theme} aria-live="polite">
+        <p className="compare-view__loading">{t('loading')}</p>
       </main>
     );
   }
+
+  const hasComparison = Boolean(
+    context.fields.length &&
+      context.records.length &&
+      appliedRecords.length >= MIN_COMPARE_RECORDS &&
+      visibleFields.length
+  );
+  const showSkeleton = hasComparison && cellValues.loading && !Object.keys(cellValues.values).length;
 
   const comparison = !context.fields.length ? (
     <EmptyState title={t('emptyTableTitle')} description={t('emptyTableDescription')} />
   ) : !context.records.length ? (
     <EmptyState title={t('noRecords')} description={t('recordsHint')} />
   ) : appliedRecords.length < MIN_COMPARE_RECORDS ? (
-    <EmptyState title={t('selectAtLeastOne')} description={t('recordsHint')} />
+    <EmptyState
+      title={t('emptySelectionTitle')}
+      description={t('emptySelectionDescription', { limit: MAX_COMPARE_RECORDS })}
+      action={
+        <button
+          type="button"
+          className="primary-button"
+          disabled={!configReady}
+          onClick={() => setOpenPanel('records')}
+        >
+          {t('chooseRecords')}
+        </button>
+      }
+    />
   ) : !visibleFields.length ? (
     <EmptyState title={t('noVisibleFields')} description={t('fieldsHint')} />
+  ) : showSkeleton ? (
+    <TableSkeleton locale={locale} columnCount={selectedIds.length} />
   ) : (
     <CompareTable
       locale={locale}
-      fields={visibleFields}
+      fields={displayFields}
       groups={appliedGroups}
       collapsedGroupKeys={comparisonCollapsedGroups}
+      differingFieldIds={differingFieldIds}
+      pendingRecordIds={pendingRecordIds}
       values={cellValues.values}
+      rowHeight={rowHeight}
       loading={cellValues.loading}
+      disabled={controlsDisabled}
       onToggleGroup={(groupKey) =>
         setComparisonCollapsedGroups((current) => toggleGroupKey(current, groupKey))
+      }
+      onRemoveRecord={removeRecord}
+      onMoveRecordBefore={(recordId, targetRecordId) =>
+        config.updateDraft((current) => ({
+          ...current,
+          selectedRecordIds: moveSelectedRecordBefore(
+            current.selectedRecordIds,
+            recordId,
+            targetRecordId
+          ),
+        }))
       }
     />
   );
 
+  const saveStatus =
+    config.status === 'loading' ? (
+      <span>{t('configLoading')}</span>
+    ) : config.status === 'error' || config.error ? (
+      <span className="toolbar__status--warning">{t('configError')}</span>
+    ) : config.remoteChanged ? (
+      <span className="toolbar__status--warning">{t('remoteChanged')}</span>
+    ) : !config.canSave ? (
+      <span>{t('configReadOnly')}</span>
+    ) : config.isDirty ? (
+      <>
+        <span className="toolbar__status-dot" aria-hidden="true" />
+        <span>{t('unsaved')}</span>
+      </>
+    ) : (
+      <span>{t('changesSaved')}</span>
+    );
+
+  const actions = (
+    <>
+      <div className="toolbar__status" aria-live="polite">
+        {saveStatus}
+      </div>
+      <label className="language-picker">
+        <span className="visually-hidden">{t('language')}</span>
+        <select value={locale} onChange={(event) => setLocale(event.target.value as UiLocale)}>
+          <option value="zh-CN">{t('chinese')}</option>
+          <option value="en-US">{t('english')}</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        className="icon-button"
+        title={t('refresh')}
+        aria-label={t('refresh')}
+        onClick={() => {
+          reload();
+          void config.reloadSharedConfig();
+        }}
+      >
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path d="M8 3.35c1.72 0 3.2 1 3.9 2.45h-1.6l2.35 2.9 2.35-2.9h-1.72A5.65 5.65 0 0 0 8 2.1 5.65 5.65 0 0 0 2.5 6.4l1.2.5A4.4 4.4 0 0 1 8 3.35Zm0 9.3a4.4 4.4 0 0 1-3.9-2.45h1.6L3.35 7.3 1 10.2h1.72A5.65 5.65 0 0 0 8 13.9c2.4 0 4.5-1.5 5.32-3.65l-1.2-.5A4.4 4.4 0 0 1 8 12.65Z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className="text-button"
+        disabled={controlsDisabled || !config.isDirty || config.saving}
+        onClick={config.discard}
+      >
+        {t('discard')}
+      </button>
+      <button
+        type="button"
+        className="text-button"
+        disabled={controlsDisabled || config.saving}
+        onClick={config.reset}
+      >
+        {t('reset')}
+      </button>
+      <button
+        type="button"
+        className="primary-button"
+        disabled={
+          controlsDisabled ||
+          !config.isDirty ||
+          config.saving ||
+          fieldValues.loading ||
+          !queryValuesReady
+        }
+        onClick={() => void config.save()}
+      >
+        {config.saving ? t('saving') : t('save')}
+      </button>
+    </>
+  );
+
   return (
     <main className="compare-view" data-theme={theme}>
-      <div className="workspace-toolbar">
-        <div className="workspace-toolbar__status" aria-live="polite">
-          {config.status === 'loading' ? <span>{t('configLoading')}</span> : null}
-          {config.status === 'error' || config.error ? (
-            <span className="workspace-toolbar__warning">{t('configError')}</span>
-          ) : null}
-          {config.status === 'ready' && !config.canSave ? (
-            <span>{t('configReadOnly')}</span>
-          ) : null}
-          {config.remoteChanged ? (
-            <span className="workspace-toolbar__warning">{t('remoteChanged')}</span>
-          ) : null}
-          {config.status === 'ready' && config.canSave && !config.remoteChanged ? (
-            <span className={config.isDirty ? 'workspace-toolbar__pending' : ''}>
-              {config.isDirty ? t('changesPending') : t('changesSaved')}
-            </span>
-          ) : null}
-        </div>
-        <div className="workspace-toolbar__actions">
-          <label className="language-picker">
-            <span className="visually-hidden">{t('language')}</span>
-            <select value={locale} onChange={(event) => setLocale(event.target.value as UiLocale)}>
-              <option value="zh-CN">{t('chinese')}</option>
-              <option value="en-US">{t('english')}</option>
-            </select>
-          </label>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              reload();
-              void config.reloadSharedConfig();
-            }}
-          >
-            {t('refresh')}
-          </button>
-          <button
-            type="button"
-            className="text-button"
-            disabled={controlsDisabled || !config.isDirty || config.saving}
-            onClick={config.discard}
-          >
-            {t('discard')}
-          </button>
-          <button
-            type="button"
-            className="text-button"
-            disabled={controlsDisabled || config.saving}
-            onClick={config.reset}
-          >
-            {t('reset')}
-          </button>
-          <button
-            type="button"
-            className="primary-button"
-            disabled={
-              controlsDisabled ||
-              !config.isDirty ||
-              config.saving ||
-              fieldValues.loading ||
-              !queryValuesReady
-            }
-            onClick={() => void config.save()}
-          >
-            {config.saving ? t('saving') : t('save')}
-          </button>
-        </div>
-      </div>
-
       <QueryToolbar
-          locale={locale}
-          fields={context.fields}
-          filters={draft?.filters ?? { conjunction: 'and', rules: [] }}
-          sortRules={draft?.sortRules ?? []}
-          groupFieldId={draft?.groupFieldId ?? null}
-          hiddenFieldIds={new Set(draft?.hiddenFieldIds ?? [])}
-          fieldValues={fieldValues.values}
-          disabled={controlsDisabled}
-          onFiltersChange={(filters) =>
-            config.updateDraft((current) => ({ ...current, filters }))
-          }
-          onSortRulesChange={updateSortRules}
-          onGroupFieldChange={(groupFieldId) =>
-            config.updateDraft((current) => ({ ...current, groupFieldId }))
-          }
-          onToggleField={(fieldId) =>
-            updateHiddenFields((current) => [...toggleId(new Set(current), fieldId)])
-          }
-          onShowAllFields={() => updateHiddenFields(() => [])}
-          onHideAllFields={() => updateHiddenFields(() => context.fields.map((field) => field.id))}
+        locale={locale}
+        fields={context.fields}
+        filters={draft?.filters ?? { conjunction: 'and', rules: [] }}
+        sortRules={draft?.sortRules ?? []}
+        groupFieldId={draft?.groupFieldId ?? null}
+        hiddenFieldIds={new Set(draft?.hiddenFieldIds ?? [])}
+        fieldValues={fieldValues.values}
+        selectedRecordCount={draft?.selectedRecordIds.length ?? 0}
+        rowHeight={rowHeight}
+        openPanel={openPanel}
+        ready={configReady}
+        disabled={controlsDisabled}
+        actions={actions}
+        recordsPanel={
+          <RecordSelector
+            locale={locale}
+            groups={candidateGroups}
+            selectedRecordIds={draft?.selectedRecordIds ?? []}
+            hiddenSelectedCount={hiddenSelectedCount}
+            collapsedGroupKeys={candidateCollapsedGroups}
+            disabled={controlsDisabled}
+            onToggle={toggleRecord}
+            onClearSelection={() =>
+              config.updateDraft((current) => ({ ...current, selectedRecordIds: [] }))
+            }
+            onMoveBefore={(recordId, targetRecordId) =>
+              config.updateDraft((current) => ({
+                ...current,
+                selectedRecordIds: moveSelectedRecordToCandidatePosition(
+                  current.selectedRecordIds,
+                  candidateRecordIds,
+                  recordId,
+                  targetRecordId
+                ),
+              }))
+            }
+            onToggleGroup={(groupKey) =>
+              setCandidateCollapsedGroups((current) => toggleGroupKey(current, groupKey))
+            }
+          />
+        }
+        onOpenPanelChange={setOpenPanel}
+        onRowHeightChange={setRowHeight}
+        onFiltersChange={(filters) => config.updateDraft((current) => ({ ...current, filters }))}
+        onSortRulesChange={updateSortRules}
+        onGroupFieldChange={(groupFieldId) =>
+          config.updateDraft((current) => ({ ...current, groupFieldId }))
+        }
+        onToggleField={(fieldId) =>
+          updateHiddenFields((current) => [...toggleId(new Set(current), fieldId)])
+        }
+        onShowAllFields={() => updateHiddenFields(() => [])}
+        onHideAllFields={() => updateHiddenFields(() => context.fields.map((field) => field.id))}
       />
 
-      <div className="control-grid">
-        <RecordSelector
+      {hasComparison ? (
+        <StatBar
           locale={locale}
-          groups={candidateGroups}
-          selectedRecordIds={draft?.selectedRecordIds ?? []}
-          hiddenSelectedCount={hiddenSelectedCount}
-          collapsedGroupKeys={candidateCollapsedGroups}
-          disabled={controlsDisabled}
-          onToggle={toggleRecord}
-          onMoveBefore={(recordId, targetRecordId) =>
-            config.updateDraft((current) => ({
-              ...current,
-              selectedRecordIds: moveSelectedRecordToCandidatePosition(
-                current.selectedRecordIds,
-                candidateRecordIds,
-                recordId,
-                targetRecordId
-              ),
-            }))
-          }
-          onToggleGroup={(groupKey) =>
-            setCandidateCollapsedGroups((current) => toggleGroupKey(current, groupKey))
-          }
+          recordCount={selectedIds.length}
+          fieldCount={visibleFields.length}
+          differenceCount={differingFieldIds.size}
+          diffOnly={diffOnly}
+          onToggleDiffOnly={() => setDiffOnly((current) => !current)}
         />
-      </div>
-
-      {!candidateRecords.length && queryValuesReady ? (
-        <p className="candidate-empty-note">{t('candidateNoRecords')}</p>
       ) : null}
-      {comparison}
+
+      <div className="panel-body">{comparison}</div>
     </main>
   );
 };

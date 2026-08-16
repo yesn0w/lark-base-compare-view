@@ -14,14 +14,32 @@ Compare View renders fields vertically and saved records horizontally.
   record order comes first; remaining records follow in primary-field order.
 - Field selection and matrix rows use the table-level default field order; the
   current view does not reorder fields in Compare View.
-- Select 1–10 records in a single candidate list. Each selected row has a
-  drag handle before its checkbox. Dragging changes saved comparison order; a
-  separate selected-record list is intentionally not shown.
+- All controls live on one toolbar: records, fields, filter, group, sort, and
+  row height, with save state and the save actions at its trailing end.
+- Select 1–10 records in a single candidate list inside the **Records**
+  popover, which also offers a search box and a clear action. Each selected row
+  has a drag handle before its checkbox. Dragging changes saved comparison
+  order; a separate selected-record list is intentionally not shown.
+- A status bar under the toolbar reports compared records, visible fields, and
+  how many fields differ, and offers a **Differences only** filter that hides
+  fields whose compared values are identical.
+- A field whose compared values are not all identical is marked with a colored
+  bar on its row header, and its cells are emphasized.
+- Row height offers four densities. Grid text stays on one line; a value too
+  long for its cell gets an inline expand action that opens it in a read-only
+  dialog.
+- A record column header can be reordered by dragging or dropped from the
+  comparison with its close action. Both edit the draft, so the column stays
+  visible, marked as pending, until the change is saved.
+- The field column can be resized by dragging or with the arrow keys.
 - Default visibility contains all non-primary fields. The first table-level
   field is the primary-field fallback, becomes the record-column title, and
   may be shown as a normal matrix row.
 - Filter, sort, group, and field visibility are extension-local controls. They
   never alter a native Base filter, group, sort, or view setting.
+- A filter on a select field picks its options from a checkbox list and accepts
+  more than one of them. A record matches only when it satisfies the operator
+  for every chosen option.
 - A filter removes candidates from the selector but never removes an already
   saved comparison record. A sort-rule change resets the selected records to
   the new sort order; drag can then make a manual adjustment.
@@ -42,13 +60,18 @@ rules, sort rules, and the group field. It is shared through Feishu’s official
 bridge data store. Base edit users may save; read-only users can load the last
 saved configuration. Concurrent saves use last-successful-write behavior.
 
-Chinese/English choice, Feishu appearance, and collapsed groups remain local to
-the current session.
+Chinese/English choice, Feishu appearance, collapsed groups, row height, the
+differences-only filter, and the field-column width remain local to the current
+session.
 
 ## Non-goals
 
 Compare View does not edit cells, write Base business data, change native Base
 view settings, add a backend or database, implement authentication or
-automation, calculate field differences, or publish an extension package. The
-only permitted SDK mutation is bridge configuration storage; it is not a Base
-data write.
+automation, or publish an extension package. The only permitted SDK mutation is
+bridge configuration storage; it is not a Base data write.
+
+Difference marking compares the formatted display text of the compared records
+and reports only whether a field's values are identical. It is not a semantic
+or numeric diff: it computes no deltas, no per-character ranges, and no
+field-type-aware comparison.

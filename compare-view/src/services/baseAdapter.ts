@@ -2,6 +2,7 @@ import {
   bitable,
   BridgeEvent,
   BridgeModule,
+  FieldType,
   OperationType,
   PermissionEntity,
   type IFieldMeta,
@@ -11,10 +12,38 @@ import {
 import type {
   CompareContext,
   CompareField,
+  CompareFieldKind,
   CompareRecord,
   FieldValueMap,
 } from '../types/compare';
 import { EMPTY_CELL_VALUE, normalizeDisplayValue } from '../utils/cellFormatting';
+
+/**
+ * Collapses the SDK's field types into the handful of shapes Compare View
+ * renders differently. Unknown and reference types read as text, which is how
+ * `normalizeDisplayValue` already presents them.
+ */
+function toCompareFieldKind(type: IFieldMeta['type']): CompareFieldKind {
+  switch (type) {
+    case FieldType.Number:
+    case FieldType.Currency:
+    case FieldType.Progress:
+    case FieldType.Rating:
+    case FieldType.AutoNumber:
+      return 'number';
+    case FieldType.SingleSelect:
+    case FieldType.MultiSelect:
+      return 'select';
+    case FieldType.DateTime:
+    case FieldType.CreatedTime:
+    case FieldType.ModifiedTime:
+      return 'date';
+    case FieldType.Checkbox:
+      return 'checkbox';
+    default:
+      return 'text';
+  }
+}
 
 /** The SDK's generated declaration does not export IWidgetView directly. */
 interface ReadableView {
@@ -86,6 +115,7 @@ export class BaseAdapter {
       name: meta.name,
       meta,
       isPrimary: index === 0,
+      kind: toCompareFieldKind(meta.type),
     }));
     const primaryFieldId = fields[0]?.id ?? null;
     const availableRecordIds = [

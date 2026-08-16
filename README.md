@@ -16,10 +16,17 @@ The UI supports Chinese and English, Feishu light/dark appearance, a sticky
 field column, horizontal scrolling, safe display fallbacks for complex values,
 and these staged comparison controls:
 
-- Select 1–10 records from one candidate list. A selected row has a native-like
-  drag handle before its checkbox; drag it to change its display order.
+- Reach every control from one compact toolbar: records, fields, filter, group,
+  sort, row height, and the save actions.
+- Select 1–10 records from one candidate list in the records popover. A selected
+  row has a native-like drag handle before its checkbox; drag it to change its
+  display order.
 - Filter, sort, group, and choose visible fields locally in the extension. They
   never alter the native table view.
+- See how many fields differ across the compared records, mark those rows, and
+  narrow the matrix to them with the differences-only filter.
+- Switch between four row heights and open a clipped value in a read-only
+  dialog.
 - Save to apply a draft. Until saving succeeds, the matrix continues to show
   the last saved configuration.
 - Share saved extension configuration through the official bridge data store.

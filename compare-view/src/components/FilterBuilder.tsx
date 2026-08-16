@@ -1,4 +1,3 @@
-import { FieldType } from '@lark-opdev/block-bitable-api';
 import { translate, type MessageKey } from '../i18n';
 import type {
   CompareField,
@@ -13,6 +12,7 @@ import {
   getQueryFieldKind,
   getUniqueFilterValues,
 } from '../utils/queryEngine';
+import { FilterValuePicker } from './FilterValuePicker';
 
 interface FilterBuilderProps {
   locale: UiLocale;
@@ -174,31 +174,16 @@ export function FilterBuilder({
                 </select>
                 {hasValueControl(operator) ? (
                   kind === 'choice' ? (
-                    <select
-                      aria-label={t('filterValue')}
-                      className={field.meta.type === FieldType.MultiSelect ? 'query-rule__multiselect' : ''}
-                      multiple={field.meta.type === FieldType.MultiSelect}
-                      value={field.meta.type === FieldType.MultiSelect ? rule.value : rule.value[0] ?? ''}
+                    <FilterValuePicker
+                      locale={locale}
+                      label={t('filterValue')}
+                      options={choices}
+                      value={rule.value}
                       disabled={disabled}
-                      onChange={(event) => {
-                        const value =
-                          field.meta.type === FieldType.MultiSelect
-                            ? Array.from(event.currentTarget.selectedOptions, (option) => option.value)
-                            : event.target.value
-                              ? [event.target.value]
-                              : [];
-                        updateRule(rule.id, (current) => ({ ...current, operator, value }));
-                      }}
-                    >
-                      {field.meta.type !== FieldType.MultiSelect ? (
-                        <option value="">{t('filterSelectValue')}</option>
-                      ) : null}
-                      {choices.map((choice) => (
-                        <option key={choice} value={choice}>
-                          {choice}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) =>
+                        updateRule(rule.id, (current) => ({ ...current, operator, value }))
+                      }
+                    />
                   ) : (
                     <input
                       aria-label={t('filterValue')}
