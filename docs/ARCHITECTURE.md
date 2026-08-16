@@ -5,12 +5,12 @@ Chinese version: [ARCHITECTURE.zh-CN.md](ARCHITECTURE.zh-CN.md).
 ## Data flow
 
 `BaseAdapter` isolates the Feishu SDK from React. It loads the active
-selection, table-level field metadata in Base's default order, the current
-view's visible record IDs, and the entire table record-ID list. The installed
-SDK has no primary-field marker, so the first table-level field is the
-primary-field display fallback. The adapter prioritizes current-view record
-order, then orders the remaining candidates by their formatted primary-field
-title.
+selection, table-level field metadata, the current view's visible record IDs,
+and the entire table record-ID list. It identifies the unique primary field
+from `IFieldMeta.isPrimary`, places it first in Compare View, and uses its
+formatted values as record titles. Metadata position is never used to infer
+which field is primary. The adapter prioritizes current-view record order, then
+orders the remaining candidates by their formatted primary-field title.
 
 `useCompareConfig` keeps two typed configurations:
 
