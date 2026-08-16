@@ -12,8 +12,9 @@ Compare View renders fields vertically and saved records horizontally.
 
 - The candidate source is the whole current table. The current view’s visible
   record order comes first; remaining records follow in primary-field order.
-- Field selection and matrix rows use the table-level default field order; the
-  current view does not reorder fields in Compare View.
+- Field selection and matrix rows place the SDK-identified primary field first;
+  all other fields retain their table metadata order. The current view does not
+  reorder fields in Compare View.
 - All controls live on one toolbar: records, fields, filter, group, sort, and
   row height, with save state and the save actions at its trailing end.
 - Select 1–10 records in a single candidate list inside the **Records**
@@ -32,9 +33,9 @@ Compare View renders fields vertically and saved records horizontally.
   comparison with its close action. Both edit the draft, so the column stays
   visible, marked as pending, until the change is saved.
 - The field column can be resized by dragging or with the arrow keys.
-- Default visibility contains all non-primary fields. The first table-level
-  field is the primary-field fallback, becomes the record-column title, and
-  may be shown as a normal matrix row.
+- Default visibility contains all non-primary fields. The SDK-identified
+  primary field becomes the record-column title and may be shown as a normal
+  matrix row.
 - Filter, sort, group, and field visibility are extension-local controls. They
   never alter a native Base filter, group, sort, or view setting.
 - A filter on a select field picks its options from a checkbox list and accepts

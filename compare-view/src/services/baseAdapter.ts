@@ -1,12 +1,11 @@
 import {
   bitable,
-  BridgeEvent,
-  BridgeModule,
   FieldType,
   OperationType,
   PermissionEntity,
   type IFieldMeta,
-  type IWidgetTable,
+  type ITable,
+  type IView,
   type ThemeModeType,
 } from '@lark-opdev/block-bitable-api';
 import type {
@@ -45,11 +44,15 @@ function toCompareFieldKind(type: IFieldMeta['type']): CompareFieldKind {
   }
 }
 
-/** The SDK's generated declaration does not export IWidgetView directly. */
-interface ReadableView {
-  id?: string;
-  getFieldMetaList(): Promise<IFieldMeta[]>;
-  getVisibleRecordIdList(): Promise<(string | undefined)[]>;
+function getPrimaryFieldMeta(fieldMetas: IFieldMeta[]): IFieldMeta {
+  const primaryFields = fieldMetas.filter((meta) => meta.isPrimary);
+  const [primaryField] = primaryFields;
+
+  if (primaryFields.length !== 1 || !primaryField) {
+    throw new Error('Unable to determine a unique primary field from the host metadata.');
+  }
+
+  return primaryField;
 }
 
 export type HostTheme = ThemeModeType;
@@ -65,14 +68,11 @@ export const subscribeToHostTheme = (
  * read APIs; no set/add/delete SDK methods are referenced in this project.
  */
 export class BaseAdapter {
-  private table: IWidgetTable | null = null;
+  private table: ITable | null = null;
   private recordIds: string[] = [];
   private fieldValueCache = new Map<string, Promise<FieldValueMap>>();
 
-  private async getCurrentView(
-    table: IWidgetTable,
-    viewId: string | null
-  ): Promise<ReadableView> {
+  private async getCurrentView(table: ITable, viewId: string | null): Promise<IView> {
     if (viewId) {
       try {
         return await table.getViewById(viewId);
@@ -107,17 +107,19 @@ export class BaseAdapter {
       table.getRecordIdList(),
     ]);
 
-    // The installed SDK exposes no primary-field marker. Table-level metadata
-    // preserves Base's default field order, so its first field is the safe
-    // primary-field display fallback instead of the current view's first field.
-    const fields: CompareField[] = tableFieldMetas.map((meta, index) => ({
+    const primaryFieldMeta = getPrimaryFieldMeta(tableFieldMetas);
+    const orderedFieldMetas = [
+      primaryFieldMeta,
+      ...tableFieldMetas.filter((meta) => meta.id !== primaryFieldMeta.id),
+    ];
+    const fields: CompareField[] = orderedFieldMetas.map((meta) => ({
       id: meta.id,
       name: meta.name,
       meta,
-      isPrimary: index === 0,
+      isPrimary: meta.id === primaryFieldMeta.id,
       kind: toCompareFieldKind(meta.type),
     }));
-    const primaryFieldId = fields[0]?.id ?? null;
+    const primaryFieldId = primaryFieldMeta.id;
     const availableRecordIds = [
       ...new Set(allRecordIds.filter((recordId): recordId is string => Boolean(recordId))),
     ];
@@ -239,7 +241,7 @@ export class BaseAdapter {
    * through the official bridge and never changes Base records, fields, or views.
    */
   async setPersistentData(data: Record<string, unknown>): Promise<void> {
-    await bitable.bridge.setData(data);
+    await bitable.bridge.setData(undefined, data);
   }
 
   async canEditBase(): Promise<boolean> {
@@ -250,8 +252,7 @@ export class BaseAdapter {
   }
 
   subscribeToPersistentData(listener: () => void): () => void {
-    const bridge = bitable.bridge as unknown as BridgeModule;
-    return bridge.bind(BridgeEvent.DataChange, listener);
+    return bitable.bridge.onDataChange(() => listener());
   }
 
   subscribe(listener: () => void): () => void {
