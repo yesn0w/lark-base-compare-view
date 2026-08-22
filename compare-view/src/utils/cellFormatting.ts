@@ -1,3 +1,5 @@
+import type { CompareCellAttachment, CompareCellValue } from '../types/compare';
+
 export const EMPTY_CELL_VALUE = '—';
 
 export function makeCellKey(fieldId: string, recordId: string): string {
@@ -58,4 +60,30 @@ export function normalizeDisplayValue(value: unknown): string {
   }
 
   return EMPTY_CELL_VALUE;
+}
+
+export function makeTextCellValue(value: unknown): CompareCellValue {
+  return {
+    text: normalizeDisplayValue(value),
+    attachments: [],
+  };
+}
+
+export function makeAttachmentCellValue(
+  attachments: CompareCellAttachment[]
+): CompareCellValue {
+  const safeAttachments = attachments.map(({ name, mimeType, thumbnailUrl }) => ({
+    name,
+    mimeType,
+    thumbnailUrl,
+  }));
+
+  return {
+    text:
+      safeAttachments
+        .map((attachment) => attachment.name.trim())
+        .filter(Boolean)
+        .join(', ') || EMPTY_CELL_VALUE,
+    attachments: safeAttachments,
+  };
 }

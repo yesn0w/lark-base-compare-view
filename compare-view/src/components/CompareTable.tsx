@@ -2,6 +2,8 @@ import { useRef, useState, type DragEvent, type PointerEvent } from 'react';
 import { translate } from '../i18n';
 import type {
   CellValueMap,
+  CompareCellAttachment,
+  CompareCellValue,
   CompareField,
   CompareRecordGroup,
   UiLocale,
@@ -9,6 +11,10 @@ import type {
 import { EMPTY_CELL_VALUE } from '../utils/cellFormatting';
 import { isLongCellValue, readCellValue } from '../utils/compareDiff';
 import type { RowHeight } from '../utils/rowHeight';
+import {
+  AttachmentPreviewDialog,
+  type PreviewableAttachment,
+} from './AttachmentPreviewDialog';
 import { CellExpandDialog } from './CellExpandDialog';
 import { FieldKindIcon } from './FieldKindIcon';
 
@@ -17,6 +23,7 @@ const MAX_FIELD_COLUMN_WIDTH = 420;
 const DEFAULT_FIELD_COLUMN_WIDTH = 200;
 const MIN_RECORD_COLUMN_WIDTH = 220;
 const RESIZE_KEYBOARD_STEP = 16;
+const MAX_INLINE_ATTACHMENT_THUMBNAILS = 4;
 
 interface CompareTableProps {
   locale: UiLocale;
@@ -40,6 +47,111 @@ interface ExpandedCell {
   value: string;
 }
 
+interface AttachmentPreview {
+  title: string;
+  images: PreviewableAttachment[];
+  initialIndex: number;
+}
+
+function isPreviewableAttachment(
+  attachment: CompareCellAttachment
+): attachment is PreviewableAttachment {
+  return (
+    attachment.mimeType.toLowerCase().startsWith('image/') &&
+    Boolean(attachment.thumbnailUrl)
+  );
+}
+
+function AttachmentThumbnail({
+  attachment,
+  label,
+  onOpen,
+}: {
+  attachment: PreviewableAttachment;
+  label: string;
+  onOpen: () => void;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <span className="attachment-file-name" title={attachment.name}>
+        {attachment.name}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      className="attachment-thumbnail"
+      aria-label={`${label}: ${attachment.name}`}
+      title={attachment.name}
+      onClick={onOpen}
+    >
+      <img
+        src={attachment.thumbnailUrl}
+        alt={attachment.name}
+        loading="lazy"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    </button>
+  );
+}
+
+function AttachmentCell({
+  locale,
+  value,
+  onPreview,
+}: {
+  locale: UiLocale;
+  value: CompareCellValue;
+  onPreview: (images: PreviewableAttachment[], initialIndex: number) => void;
+}) {
+  const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
+    translate(locale, key, values);
+  const images = value.attachments.filter(isPreviewableAttachment);
+  const visibleImages = images.slice(0, MAX_INLINE_ATTACHMENT_THUMBNAILS);
+  const hiddenImageCount = images.length - visibleImages.length;
+  const fallbackNames = value.attachments
+    .filter((attachment) => !isPreviewableAttachment(attachment))
+    .map((attachment) => attachment.name);
+
+  return (
+    <div className="attachment-cell">
+      {visibleImages.length ? (
+        <div className="attachment-thumbnails">
+          {visibleImages.map((attachment, index) => (
+            <AttachmentThumbnail
+              attachment={attachment}
+              label={t('previewAttachment')}
+              onOpen={() => onPreview(images, index)}
+              key={`${index}:${attachment.name}:${attachment.thumbnailUrl}`}
+            />
+          ))}
+          {hiddenImageCount > 0 ? (
+            <button
+              type="button"
+              className="attachment-more"
+              aria-label={t('moreImages', { count: hiddenImageCount })}
+              title={t('moreImages', { count: hiddenImageCount })}
+              onClick={() => onPreview(images, MAX_INLINE_ATTACHMENT_THUMBNAILS)}
+            >
+              +{hiddenImageCount}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      {fallbackNames.length ? (
+        <span className="attachment-file-names" title={fallbackNames.join(', ')}>
+          {fallbackNames.join(', ')}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function CompareTable({
   locale,
   fields,
@@ -58,6 +170,7 @@ export function CompareTable({
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const [fieldColumnWidth, setFieldColumnWidth] = useState(DEFAULT_FIELD_COLUMN_WIDTH);
   const [expandedCell, setExpandedCell] = useState<ExpandedCell | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
@@ -283,7 +396,10 @@ export function CompareTable({
                 <tr
                   className={differs ? 'compare-table__row--diff' : undefined}
                   key={field.id}
-                  style={{ height: rowHeight }}
+                  style={{
+                    height: rowHeight,
+                    ['--compare-row-height' as string]: `${rowHeight}px`,
+                  }}
                 >
                   <th scope="row" className="compare-table__field-header" title={field.name}>
                     <div className="compare-table__field-name">
@@ -298,7 +414,9 @@ export function CompareTable({
                   </th>
                   {records.map((record) => {
                     const value = readCellValue(values, field.id, record.id);
-                    const isTag = field.kind === 'select' && value !== EMPTY_CELL_VALUE;
+                    const isTag = field.kind === 'select' && value.text !== EMPTY_CELL_VALUE;
+                    const hasAttachments =
+                      field.kind === 'attachment' && value.attachments.length > 0;
 
                     return (
                       <td
@@ -306,21 +424,37 @@ export function CompareTable({
                           pendingRecordIds.has(record.id) ? 'compare-table__cell--pending' : undefined
                         }
                         key={record.id}
-                        title={value}
+                        title={value.text}
                       >
                         <div className="compare-table__cell">
-                          {isTag ? (
-                            <span className="cell-tag">{value}</span>
+                          {hasAttachments ? (
+                            <AttachmentCell
+                              locale={locale}
+                              value={value}
+                              onPreview={(images, initialIndex) => {
+                                setExpandedCell(null);
+                                setAttachmentPreview({
+                                  title: field.name,
+                                  images,
+                                  initialIndex,
+                                });
+                              }}
+                            />
+                          ) : isTag ? (
+                            <span className="cell-tag">{value.text}</span>
                           ) : (
                             <span className={`cell-text${differs ? ' cell-text--diff' : ''}`}>
-                              {value}
+                              {value.text}
                             </span>
                           )}
-                          {isLongCellValue(value) ? (
+                          {isLongCellValue(value.text) ? (
                             <button
                               type="button"
                               className="link-button cell-expand"
-                              onClick={() => setExpandedCell({ title: field.name, value })}
+                              onClick={() => {
+                                setAttachmentPreview(null);
+                                setExpandedCell({ title: field.name, value: value.text });
+                              }}
                             >
                               {t('expandCell')}
                             </button>
@@ -342,6 +476,15 @@ export function CompareTable({
           title={expandedCell.title}
           value={expandedCell.value}
           onClose={() => setExpandedCell(null)}
+        />
+      ) : null}
+      {attachmentPreview ? (
+        <AttachmentPreviewDialog
+          locale={locale}
+          title={attachmentPreview.title}
+          images={attachmentPreview.images}
+          initialIndex={attachmentPreview.initialIndex}
+          onClose={() => setAttachmentPreview(null)}
         />
       ) : null}
     </section>

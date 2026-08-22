@@ -7,7 +7,13 @@ export type UiLocale = 'zh-CN' | 'en-US';
  * a field glyph and a cell style without importing the Feishu SDK enum, which
  * stays inside `services/baseAdapter.ts`.
  */
-export type CompareFieldKind = 'text' | 'select' | 'number' | 'date' | 'checkbox';
+export type CompareFieldKind =
+  | 'text'
+  | 'select'
+  | 'number'
+  | 'date'
+  | 'checkbox'
+  | 'attachment';
 
 export interface CompareField {
   id: string;
@@ -78,7 +84,18 @@ export interface CompareViewConfig {
   groupFieldId: string | null;
 }
 
-export type CellValueMap = Record<string, string>;
+export interface CompareCellAttachment {
+  name: string;
+  mimeType: string;
+  thumbnailUrl: string | null;
+}
+
+export interface CompareCellValue {
+  text: string;
+  attachments: CompareCellAttachment[];
+}
+
+export type CellValueMap = Record<string, CompareCellValue>;
 export type FieldValueMap = Record<string, unknown>;
 
 export interface CompareRecordGroup {

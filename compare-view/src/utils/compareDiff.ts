@@ -1,4 +1,4 @@
-import type { CellValueMap } from '../types/compare';
+import type { CellValueMap, CompareCellValue } from '../types/compare';
 import { EMPTY_CELL_VALUE, makeCellKey } from './cellFormatting';
 
 /**
@@ -12,8 +12,13 @@ export function readCellValue(
   values: CellValueMap,
   fieldId: string,
   recordId: string
-): string {
-  return values[makeCellKey(fieldId, recordId)] ?? EMPTY_CELL_VALUE;
+): CompareCellValue {
+  return (
+    values[makeCellKey(fieldId, recordId)] ?? {
+      text: EMPTY_CELL_VALUE,
+      attachments: [],
+    }
+  );
 }
 
 /**
@@ -29,8 +34,8 @@ export function fieldHasDifference(
     return false;
   }
 
-  const first = readCellValue(values, fieldId, recordIds[0]);
-  return recordIds.some((recordId) => readCellValue(values, fieldId, recordId) !== first);
+  const first = readCellValue(values, fieldId, recordIds[0]).text;
+  return recordIds.some((recordId) => readCellValue(values, fieldId, recordId).text !== first);
 }
 
 export function isLongCellValue(value: string): boolean {
