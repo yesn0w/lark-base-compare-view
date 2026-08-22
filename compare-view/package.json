@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "check:opdev": "node ./scripts/check-opdev-tooling.cjs",
+    "check:attachments": "node ./scripts/check-attachments.cjs",
     "check:webpackbar": "node ./scripts/check-webpackbar.cjs",
     "dev": "npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=development webpack-dev-server --mode development --config ./config/webpack.config.js",
     "start": "npm run dev",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
+    "build": "npm run typecheck && npm run check:attachments && npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
     "upload": "npm run build && opdev upload ./dist"
   },
   "dependencies": {

@@ -64,7 +64,10 @@ npm run check:opdev
 - Open the same extension in a second tab. Save in one tab and confirm the
   other tab refreshes its shared configuration; verify last successful save
   wins when both tabs have a draft.
-- Check text, select, date, number, relation, person, and attachment values.
+- Check text, select, date, number, relation, and person values. For attachment
+  cells, verify one and several images, a mixed image/PDF value, empty values,
+  all thumbnails remaining directly visible, the read-only gallery, keyboard
+  navigation, and a filename fallback when a preview cannot load.
 - Switch Feishu between light and dark appearance and confirm the view updates
   without a reload.
 - Change a Base record or field and confirm the extension refreshes.

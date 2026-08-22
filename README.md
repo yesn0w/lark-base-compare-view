@@ -27,6 +27,9 @@ and these staged comparison controls:
   narrow the matrix to them with the differences-only filter.
 - Switch between four row heights and open a clipped value in a read-only
   dialog.
+- See every image-attachment thumbnail directly in each cell, click any image
+  to open the full in-extension gallery, and keep non-image files readable by
+  name.
 - Save to apply a draft. Until saving succeeds, the matrix continues to show
   the last saved configuration.
 - Share saved extension configuration through the official bridge data store.
@@ -84,6 +87,7 @@ Feishu console before publishing.
 ```sh
 cd compare-view
 npm run typecheck
+npm run check:attachments
 npm run build
 ```
 

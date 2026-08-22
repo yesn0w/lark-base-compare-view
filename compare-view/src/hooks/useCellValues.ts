@@ -37,7 +37,7 @@ export function useCellValues(
         const entries = await Promise.all(
           fields.flatMap((field) =>
             recordIds.map(async (recordId) => {
-              const value = await adapter.getCellDisplayValue(field.id, recordId);
+              const value = await adapter.getCellDisplayValue(field, recordId);
               return [makeCellKey(field.id, recordId), value] as const;
             })
           )

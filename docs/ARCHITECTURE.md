@@ -25,7 +25,8 @@ unsaved local drafts are retained and report a remote change.
 `useFieldValues` loads raw field values lazily for query controls.
 `queryEngine` is pure: it normalizes values, filters, stably sorts, inserts the
 manual selected-record order into the candidate list, and places a record in at
-most one group. `useCellValues` remains responsible for formatted matrix text.
+most one group. `useCellValues` loads structured matrix values containing stable
+display text plus in-memory attachment presentation metadata.
 
 The host theme and language are presentational state. Language and collapse
 state never enter the bridge payload.
@@ -38,7 +39,8 @@ operations used by the adapter:
 - `bitable.base.getSelection()`, `getTableById()`, and `getPermission()`;
 - table and view metadata, `getRecordIdList()`, and visible record IDs;
 - field `getFieldValueList()` with a raw-cell fallback;
-- `getCellString()` with `getCellValue()` formatting fallback;
+- `getCellString()` with `getCellValue()` formatting fallback, plus
+  `getCellThumbnailUrls()` for image attachments;
 - table/base change listeners plus bridge theme and data-change listeners;
 - `bitable.bridge.getData()` and the single allowed mutation,
   `bitable.bridge.setData()`.
@@ -59,15 +61,16 @@ wiring out of the toolbar.
 list, plus a local search box. Its draggable handle is enabled only for
 selected rows, while the following checkbox controls selection.
 
-`CompareTable` receives saved fields, grouped saved records, formatted strings,
-and the set of differing field IDs. It owns matrix-only collapsible group
-controls, sticky headers, the sticky field column and its resize handle, record
-column reordering and removal, and `CellExpandDialog` for clipped values.
-`StatBar` and `TableSkeleton` are presentational. None of these components
-recreates a Feishu native editor.
+`CompareTable` receives saved fields, grouped saved records, structured display
+values, and the set of differing field IDs. It owns matrix-only collapsible
+group controls, sticky headers, the sticky field column and its resize handle,
+record column reordering and removal, `CellExpandDialog` for clipped values, and
+the read-only attachment gallery. `StatBar` and `TableSkeleton` are
+presentational. None of these components recreates a Feishu native editor.
 
-`compareDiff` is pure. It compares the formatted display text already loaded by
-`useCellValues`, so difference marking needs no extra SDK call. `App` derives
+`compareDiff` is pure. It compares only the stable formatted display text
+already loaded by `useCellValues`, never temporary thumbnail URLs, so difference
+marking needs no extra SDK call. `App` derives
 the differing-field set once and reuses it for the status bar count, the row
 markers, and the differences-only filter.
 

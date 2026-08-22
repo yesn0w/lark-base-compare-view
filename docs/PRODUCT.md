@@ -29,6 +29,10 @@ Compare View renders fields vertically and saved records horizontally.
 - Row height offers four densities. Grid text stays on one line; a value too
   long for its cell gets an inline expand action that opens it in a read-only
   dialog.
+- An attachment cell shows every image thumbnail directly. Clicking any image
+  opens a read-only gallery with keyboard navigation; record columns widen and
+  use the matrix's horizontal scroll when needed, while non-image files and
+  unavailable previews remain readable by filename.
 - A record column header can be reordered by dragging or dropped from the
   comparison with its close action. Both edit the draft, so the column stays
   visible, marked as pending, until the change is saved.
@@ -65,12 +69,16 @@ Chinese/English choice, Feishu appearance, collapsed groups, row height, the
 differences-only filter, and the field-column width remain local to the current
 session.
 
+Attachment thumbnail URLs are temporary presentation data. They remain only in
+memory, refresh with Base data, and never enter the saved bridge configuration.
+
 ## Non-goals
 
 Compare View does not edit cells, write Base business data, change native Base
 view settings, add a backend or database, implement authentication or
-automation, or publish an extension package. The only permitted SDK mutation is
-bridge configuration storage; it is not a Base data write.
+automation, download or upload attachments, or publish an extension package.
+The only permitted SDK mutation is bridge configuration storage; it is not a
+Base data write.
 
 Difference marking compares the formatted display text of the compared records
 and reports only whether a field's values are identical. It is not a semantic

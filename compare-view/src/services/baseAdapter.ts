@@ -1,6 +1,8 @@
 import {
   bitable,
+  checkers,
   FieldType,
+  ImageQuality,
   OperationType,
   PermissionEntity,
   type IFieldMeta,
@@ -10,12 +12,19 @@ import {
 } from '@lark-opdev/block-bitable-api';
 import type {
   CompareContext,
+  CompareCellAttachment,
+  CompareCellValue,
   CompareField,
   CompareFieldKind,
   CompareRecord,
   FieldValueMap,
 } from '../types/compare';
-import { EMPTY_CELL_VALUE, normalizeDisplayValue } from '../utils/cellFormatting';
+import {
+  EMPTY_CELL_VALUE,
+  makeAttachmentCellValue,
+  makeTextCellValue,
+  normalizeDisplayValue,
+} from '../utils/cellFormatting';
 
 /**
  * Collapses the SDK's field types into the handful of shapes Compare View
@@ -39,6 +48,8 @@ function toCompareFieldKind(type: IFieldMeta['type']): CompareFieldKind {
       return 'date';
     case FieldType.Checkbox:
       return 'checkbox';
+    case FieldType.Attachment:
+      return 'attachment';
     default:
       return 'text';
   }
@@ -169,11 +180,11 @@ export class BaseAdapter {
       return { id, title: id };
     }
 
-    const title = await this.getCellDisplayValue(primaryFieldId, id);
+    const title = await this.getCellDisplayText(primaryFieldId, id);
     return { id, title: title === EMPTY_CELL_VALUE ? id : title };
   }
 
-  async getCellDisplayValue(fieldId: string, recordId: string): Promise<string> {
+  private async getCellDisplayText(fieldId: string, recordId: string): Promise<string> {
     const table = this.table;
     if (!table) {
       throw new Error('Load the current Bitable context before reading cells.');
@@ -187,6 +198,63 @@ export class BaseAdapter {
       } catch {
         return EMPTY_CELL_VALUE;
       }
+    }
+  }
+
+  async getCellDisplayValue(
+    field: CompareField,
+    recordId: string
+  ): Promise<CompareCellValue> {
+    const table = this.table;
+    if (!table) {
+      throw new Error('Load the current Bitable context before reading cells.');
+    }
+
+    if (field.meta.type !== FieldType.Attachment) {
+      return makeTextCellValue(await this.getCellDisplayText(field.id, recordId));
+    }
+
+    try {
+      const rawValue = await table.getCellValue(field.id, recordId);
+      if (!checkers.isAttachments(rawValue)) {
+        return makeTextCellValue(await this.getCellDisplayText(field.id, recordId));
+      }
+
+      const imageAttachments = rawValue.filter((attachment) =>
+        attachment.type.toLowerCase().startsWith('image/')
+      );
+      let thumbnailUrls: string[] = [];
+
+      if (imageAttachments.length) {
+        try {
+          thumbnailUrls = await table.getCellThumbnailUrls(
+            imageAttachments.map((attachment) => attachment.token),
+            field.id,
+            recordId,
+            ImageQuality.HIGH
+          );
+        } catch {
+          // File names remain readable when the host cannot issue thumbnail URLs.
+        }
+      }
+
+      let nextImageIndex = 0;
+      const attachments = rawValue.map<CompareCellAttachment>((attachment) => {
+        const isImage = attachment.type.toLowerCase().startsWith('image/');
+        const thumbnailUrl = isImage
+          ? thumbnailUrls[nextImageIndex++]?.trim() || null
+          : null;
+
+        return {
+          name: attachment.name,
+          mimeType: attachment.type,
+          thumbnailUrl,
+        };
+      });
+
+      return makeAttachmentCellValue(attachments);
+    } catch {
+      return makeTextCellValue(await this.getCellDisplayText(field.id, recordId));
     }
   }
 

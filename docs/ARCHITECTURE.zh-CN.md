@@ -13,7 +13,7 @@
 
 Bridge 载荷带有 schema 版本并限定到当前数据表与视图。它只包含插件设置：所选 ID、隐藏 ID、筛选条件、排序规则和分组字段。`DataChange` 会重新加载共享配置；未保存的本地草稿会被保留，并提示远端发生变更。
 
-`useFieldValues` 会按需加载查询控制所需的原始字段值。`queryEngine` 是纯函数：规范化值、筛选、稳定排序、将所选记录的手动顺序插入候选列表，并让一条记录最多进入一个分组。`useCellValues` 仍负责矩阵的格式化显示文本。
+`useFieldValues` 会按需加载查询控制所需的原始字段值。`queryEngine` 是纯函数：规范化值、筛选、稳定排序、将所选记录的手动顺序插入候选列表，并让一条记录最多进入一个分组。`useCellValues` 加载结构化矩阵值，其中包含稳定的显示文本以及仅存于内存的附件呈现元数据。
 
 宿主主题和语言属于呈现状态。语言与折叠状态不会写入 Bridge 载荷。
 
@@ -24,7 +24,7 @@ Bridge 载荷带有 schema 版本并限定到当前数据表与视图。它只�
 - `bitable.base.getSelection()`、`getTableById()` 和 `getPermission()`；
 - 表格与视图元数据、`getRecordIdList()` 和可见记录 ID；
 - 字段 `getFieldValueList()`，以及原始单元格值回退；
-- `getCellString()`，以及 `getCellValue()` 格式化回退；
+- `getCellString()`、`getCellValue()` 格式化回退，以及用于图片附件的 `getCellThumbnailUrls()`；
 - 表格/Base 变更监听器，以及 Bridge 主题和数据变更监听器；
 - `bitable.bridge.getData()` 和唯一允许的可变操作 `bitable.bridge.setData()`。
 
@@ -36,8 +36,8 @@ Bridge 载荷带有 schema 版本并限定到当前数据表与视图。它只�
 
 `RecordSelector` 渲染该记录面板：所有可选记录放在同一个列表中，并附带本地搜索框。拖动把手只对已选行启用，后面的复选框负责选择。
 
-`CompareTable` 接收已保存的字段、已分组的已保存记录、格式化字符串以及存在差异的字段 ID 集合。它负责仅矩阵使用的可折叠分组控制、固定表头、固定字段列及其宽度拖拽手柄、记录列的排序与移除，以及用于展示被截断内容的 `CellExpandDialog`。`StatBar` 与 `TableSkeleton` 是纯展示组件。这些组件都不会重建飞书原生编辑器。
+`CompareTable` 接收已保存的字段、已分组的已保存记录、结构化显示值以及存在差异的字段 ID 集合。它负责仅矩阵使用的可折叠分组控制、固定表头、固定字段列及其宽度拖拽手柄、记录列的排序与移除、用于展示被截断内容的 `CellExpandDialog`，以及只读附件图库。`StatBar` 与 `TableSkeleton` 是纯展示组件。这些组件都不会重建飞书原生编辑器。
 
-`compareDiff` 是纯函数。它比较 `useCellValues` 已加载的格式化显示文本，因此差异标记不需要额外的 SDK 调用。`App` 只计算一次差异字段集合，并复用于统计条计数、行首标记和「仅看差异」筛选。
+`compareDiff` 是纯函数。它只比较 `useCellValues` 已加载的稳定格式化显示文本，绝不比较临时缩略图 URL，因此差异标记不需要额外的 SDK 调用。`App` 只计算一次差异字段集合，并复用于统计条计数、行首标记和「仅看差异」筛选。
 
 `CompareField.kind` 将 SDK 的字段类型归并为网格需要区分渲染的几种形态。它由 `BaseAdapter` 计算，从而使 `FieldType` 保持在 SDK 边界之内，React 层不直接依赖 SDK。
