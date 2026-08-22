@@ -1227,23 +1227,6 @@ select:disabled {
   width: 100%;
 }
 
-.attachment-more {
-  background: var(--surface-2);
-  border: 1px solid var(--control-border);
-  border-radius: 4px;
-  color: var(--muted);
-  flex: 0 0 auto;
-  font-size: 11px;
-  height: 24px;
-  padding: 0 5px;
-}
-
-.attachment-more:hover {
-  border-color: var(--accent-solid);
-  color: var(--text);
-}
-
-.attachment-more:focus-visible,
 .attachment-dialog__nav:focus-visible {
   outline: 2px solid var(--accent-solid);
   outline-offset: 1px;

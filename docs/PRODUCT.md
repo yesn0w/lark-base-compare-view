@@ -29,9 +29,10 @@ Compare View renders fields vertically and saved records horizontally.
 - Row height offers four densities. Grid text stays on one line; a value too
   long for its cell gets an inline expand action that opens it in a read-only
   dialog.
-- An attachment cell shows up to four image thumbnails and a remaining-image
-  count. Clicking either opens a read-only gallery with keyboard navigation;
-  non-image files and unavailable previews remain readable by filename.
+- An attachment cell shows every image thumbnail directly. Clicking any image
+  opens a read-only gallery with keyboard navigation; record columns widen and
+  use the matrix's horizontal scroll when needed, while non-image files and
+  unavailable previews remain readable by filename.
 - A record column header can be reordered by dragging or dropped from the
   comparison with its close action. Both edit the draft, so the column stays
   visible, marked as pending, until the change is saved.

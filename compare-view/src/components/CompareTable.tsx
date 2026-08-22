@@ -23,7 +23,8 @@ const MAX_FIELD_COLUMN_WIDTH = 420;
 const DEFAULT_FIELD_COLUMN_WIDTH = 200;
 const MIN_RECORD_COLUMN_WIDTH = 220;
 const RESIZE_KEYBOARD_STEP = 16;
-const MAX_INLINE_ATTACHMENT_THUMBNAILS = 4;
+const ATTACHMENT_THUMBNAIL_GAP = 4;
+const CELL_HORIZONTAL_PADDING = 24;
 
 interface CompareTableProps {
   locale: UiLocale;
@@ -60,6 +61,32 @@ function isPreviewableAttachment(
     attachment.mimeType.toLowerCase().startsWith('image/') &&
     Boolean(attachment.thumbnailUrl)
   );
+}
+
+function getRecordColumnWidth(
+  fields: CompareField[],
+  values: CellValueMap,
+  recordId: string,
+  rowHeight: RowHeight
+): number {
+  const thumbnailSize = Math.min(36, Math.max(24, rowHeight - 8));
+  const maxImageCount = fields.reduce((count, field) => {
+    if (field.kind !== 'attachment') {
+      return count;
+    }
+
+    const imageCount = readCellValue(values, field.id, recordId).attachments.filter(
+      isPreviewableAttachment
+    ).length;
+    return Math.max(count, imageCount);
+  }, 0);
+  const attachmentWidth = maxImageCount
+    ? maxImageCount * thumbnailSize +
+      (maxImageCount - 1) * ATTACHMENT_THUMBNAIL_GAP +
+      CELL_HORIZONTAL_PADDING
+    : 0;
+
+  return Math.max(MIN_RECORD_COLUMN_WIDTH, attachmentWidth);
 }
 
 function AttachmentThumbnail({
@@ -109,20 +136,17 @@ function AttachmentCell({
   value: CompareCellValue;
   onPreview: (images: PreviewableAttachment[], initialIndex: number) => void;
 }) {
-  const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
-    translate(locale, key, values);
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const images = value.attachments.filter(isPreviewableAttachment);
-  const visibleImages = images.slice(0, MAX_INLINE_ATTACHMENT_THUMBNAILS);
-  const hiddenImageCount = images.length - visibleImages.length;
   const fallbackNames = value.attachments
     .filter((attachment) => !isPreviewableAttachment(attachment))
     .map((attachment) => attachment.name);
 
   return (
     <div className="attachment-cell">
-      {visibleImages.length ? (
+      {images.length ? (
         <div className="attachment-thumbnails">
-          {visibleImages.map((attachment, index) => (
+          {images.map((attachment, index) => (
             <AttachmentThumbnail
               attachment={attachment}
               label={t('previewAttachment')}
@@ -130,17 +154,6 @@ function AttachmentCell({
               key={`${index}:${attachment.name}:${attachment.thumbnailUrl}`}
             />
           ))}
-          {hiddenImageCount > 0 ? (
-            <button
-              type="button"
-              className="attachment-more"
-              aria-label={t('moreImages', { count: hiddenImageCount })}
-              title={t('moreImages', { count: hiddenImageCount })}
-              onClick={() => onPreview(images, MAX_INLINE_ATTACHMENT_THUMBNAILS)}
-            >
-              +{hiddenImageCount}
-            </button>
-          ) : null}
         </div>
       ) : null}
       {fallbackNames.length ? (
@@ -178,6 +191,12 @@ export function CompareTable({
   const grouped = groups.some((group) => Boolean(group.label));
   const visibleGroups = groups.filter((group) => !collapsedGroupKeys.has(group.key));
   const records = visibleGroups.flatMap((group) => group.records);
+  const recordColumnWidths = new Map(
+    records.map((record) => [
+      record.id,
+      getRecordColumnWidth(fields, values, record.id, rowHeight),
+    ])
+  );
 
   const clampFieldColumnWidth = (width: number) =>
     Math.min(MAX_FIELD_COLUMN_WIDTH, Math.max(MIN_FIELD_COLUMN_WIDTH, width));
@@ -348,13 +367,22 @@ export function CompareTable({
           className="compare-table"
           data-grouped={grouped ? 'true' : 'false'}
           style={{
-            minWidth: fieldColumnWidth + records.length * MIN_RECORD_COLUMN_WIDTH,
+            minWidth:
+              fieldColumnWidth +
+              records.reduce(
+                (width, record) =>
+                  width + (recordColumnWidths.get(record.id) ?? MIN_RECORD_COLUMN_WIDTH),
+                0
+              ),
           }}
         >
           <colgroup>
             <col style={{ width: fieldColumnWidth }} />
             {records.map((record) => (
-              <col key={record.id} />
+              <col
+                key={record.id}
+                style={{ width: recordColumnWidths.get(record.id) ?? MIN_RECORD_COLUMN_WIDTH }}
+              />
             ))}
           </colgroup>
           <thead>

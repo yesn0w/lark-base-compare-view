@@ -27,9 +27,9 @@ and these staged comparison controls:
   narrow the matrix to them with the differences-only filter.
 - Switch between four row heights and open a clipped value in a read-only
   dialog.
-- See up to four image-attachment thumbnails in each cell, open the full
-  in-extension gallery for additional images, and keep non-image files readable
-  by name.
+- See every image-attachment thumbnail directly in each cell, click any image
+  to open the full in-extension gallery, and keep non-image files readable by
+  name.
 - Save to apply a draft. Until saving succeeds, the matrix continues to show
   the last saved configuration.
 - Share saved extension configuration through the official bridge data store.

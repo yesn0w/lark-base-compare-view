@@ -21,13 +21,13 @@ async function main() {
           isPrimary: false,
           kind: 'attachment'
         };
-        const images = Array.from({ length: 5 }, (_, index) => ({
+        const images = Array.from({ length: 8 }, (_, index) => ({
           name: \`image-\${index + 1}.png\`,
           mimeType: 'image/png',
           thumbnailUrl: \`https://example.invalid/image-\${index + 1}.png\`
         }));
         const attachmentValue = {
-          text: 'image-1.png, image-2.png, image-3.png, image-4.png, image-5.png, failed.png, guide.pdf',
+          text: 'image-1.png, image-2.png, image-3.png, image-4.png, image-5.png, image-6.png, image-7.png, image-8.png, failed.png, guide.pdf',
           attachments: [
             ...images,
             { name: 'failed.png', mimeType: 'image/png', thumbnailUrl: null },
@@ -59,14 +59,25 @@ async function main() {
           onMoveRecordBefore() {}
         }));
 
-        assert.equal((markup.match(/<img\\b/g) ?? []).length, 4, 'renders at most four thumbnails');
+        assert.equal((markup.match(/<img\\b/g) ?? []).length, 8, 'renders every image thumbnail');
+        assert.equal(
+          (markup.match(/class="attachment-thumbnail"/g) ?? []).length,
+          8,
+          'makes every image thumbnail clickable'
+        );
         assert.ok(
           markup.includes('src="https://example.invalid/image-1.png"'),
           'renders the SDK-provided thumbnail URL'
         );
         assert.match(markup, /alt="image-1\.png"/);
+        assert.match(markup, /alt="image-8\.png"/, 'keeps every image directly accessible');
         assert.match(markup, /loading="lazy"/);
-        assert.match(markup, />\\+1</, 'reports additional previewable images');
+        assert.doesNotMatch(markup, />\\+\\d+</, 'does not collapse images behind a count');
+        assert.match(
+          markup,
+          /min-width:664px/,
+          'widens the matrix so every thumbnail remains directly visible'
+        );
         assert.match(markup, /failed\.png/, 'falls back to a filename when no thumbnail is available');
         assert.match(markup, /guide\.pdf/, 'keeps non-image attachments readable');
         assert.match(markup, />—</, 'keeps empty attachment cells readable');
@@ -80,7 +91,7 @@ async function main() {
         }));
         assert.match(dialogMarkup, /role="dialog"/);
         assert.match(dialogMarkup, /image-2\.png/, 'opens the selected image');
-        assert.match(dialogMarkup, />2 of 5</, 'reports the selected image and gallery size');
+        assert.match(dialogMarkup, />2 of 8</, 'reports the selected image and gallery size');
         assert.match(dialogMarkup, />Previous</);
         assert.match(dialogMarkup, />Next</);
 

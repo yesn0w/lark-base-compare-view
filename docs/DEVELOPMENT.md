@@ -66,8 +66,8 @@ npm run check:opdev
   wins when both tabs have a draft.
 - Check text, select, date, number, relation, and person values. For attachment
   cells, verify one and several images, a mixed image/PDF value, empty values,
-  the four-thumbnail limit, the read-only gallery, keyboard navigation, and a
-  filename fallback when a preview cannot load.
+  all thumbnails remaining directly visible, the read-only gallery, keyboard
+  navigation, and a filename fallback when a preview cannot load.
 - Switch Feishu between light and dark appearance and confirm the view updates
   without a reload.
 - Change a Base record or field and confirm the extension refreshes.
