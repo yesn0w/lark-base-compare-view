@@ -19,6 +19,7 @@ Compare View 是一个用于并排比较记录的飞书/Lark 多维表格数据�
 - 每个附件单元格直接显示全部图片缩略图，点击任一图片可在插件内只读图库中放大查看；非图片附件仍按文件名显示。
 - 点击保存后才应用草稿；保存成功前，比较矩阵始终展示上一次已保存的配置。
 - 通过官方 Bridge 数据存储共享已保存的插件配置。这是唯一的写操作，绝不会写入多维表格业务数据。
+- 可在飞书手机 App 中打开已有 Compare View，查看网页端最后保存的配置。手机端目前有意保持只读；请在网页端或桌面客户端创建视图并修改配置。
 
 ## 界面示例
 
@@ -61,6 +62,7 @@ cp compare-view/block.json.example compare-view/block.json
 ```sh
 cd compare-view
 npm run typecheck
+npm run check:mobile-config
 npm run check:attachments
 npm run build
 ```

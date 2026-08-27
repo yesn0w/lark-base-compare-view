@@ -34,6 +34,9 @@ and these staged comparison controls:
   the last saved configuration.
 - Share saved extension configuration through the official bridge data store.
   This is the only write operation and never writes Base business data.
+- Open an existing Compare View in the Feishu mobile app to inspect the last
+  configuration saved on the web. Mobile is intentionally view-only for now;
+  create the view and edit its configuration on the web or desktop client.
 
 ## Interface example
 
@@ -87,6 +90,7 @@ Feishu console before publishing.
 ```sh
 cd compare-view
 npm run typecheck
+npm run check:mobile-config
 npm run check:attachments
 npm run build
 ```

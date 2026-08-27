@@ -8,12 +8,14 @@ import {
   makePersistedConfig,
   readCompareConfig,
 } from '../utils/compareConfig';
+import { loadCompareConfigAccess } from '../utils/configAccess';
 
 interface CompareConfigState {
   status: 'loading' | 'ready' | 'error';
   applied: CompareViewConfig | null;
   draft: CompareViewConfig | null;
   canSave: boolean;
+  readOnlyReason: 'mobile' | 'permission' | null;
   saving: boolean;
   remoteChanged: boolean;
   error: string | null;
@@ -24,6 +26,7 @@ const initialState: CompareConfigState = {
   applied: null,
   draft: null,
   canSave: false,
+  readOnlyReason: null,
   saving: false,
   remoteChanged: false,
   error: null,
@@ -92,7 +95,8 @@ export function useCompareConfig(adapter: BaseAdapter | null, context: CompareCo
     }
 
     try {
-      const remote = getRemoteConfig(await adapter.getPersistentData(), context);
+      const persistent = await adapter.getPersistentData(context);
+      const remote = getRemoteConfig(persistent.data, context);
       applyRemoteConfig(remote);
     } catch {
       setState((current) => ({
@@ -115,8 +119,8 @@ export function useCompareConfig(adapter: BaseAdapter | null, context: CompareCo
     if (sourceChanged) {
       loadedSourceKeyRef.current = sourceKey;
       setState({ ...initialState, status: 'loading' });
-      void Promise.all([adapter.getPersistentData(), adapter.canEditBase()])
-        .then(([data, canSave]) => {
+      void loadCompareConfigAccess(adapter, context)
+        .then(({ data, canSave, readOnlyReason }) => {
           if (!active) {
             return;
           }
@@ -127,6 +131,7 @@ export function useCompareConfig(adapter: BaseAdapter | null, context: CompareCo
             applied: cloneCompareConfig(config),
             draft: cloneCompareConfig(config),
             canSave,
+            readOnlyReason,
             saving: false,
             remoteChanged: false,
             error: null,
@@ -140,6 +145,7 @@ export function useCompareConfig(adapter: BaseAdapter | null, context: CompareCo
               applied: cloneCompareConfig(config),
               draft: cloneCompareConfig(config),
               canSave: false,
+              readOnlyReason: null,
               saving: false,
               remoteChanged: false,
               error: 'Unable to read the shared extension configuration.',
@@ -227,14 +233,20 @@ export function useCompareConfig(adapter: BaseAdapter | null, context: CompareCo
 
   const save = useCallback(async () => {
     const currentState = stateRef.current;
-    if (!adapter || !currentState.draft || !currentState.canSave || currentState.saving) {
+    if (
+      !adapter ||
+      !context ||
+      !currentState.draft ||
+      !currentState.canSave ||
+      currentState.saving
+    ) {
       return false;
     }
 
     const next = cloneCompareConfig(currentState.draft);
     setState((current) => ({ ...current, saving: true, error: null }));
     try {
-      await adapter.setPersistentData(makePersistedConfig(next));
+      await adapter.setPersistentData(context, makePersistedConfig(next));
       setState((current) => ({
         ...current,
         status: 'ready',
@@ -253,7 +265,7 @@ export function useCompareConfig(adapter: BaseAdapter | null, context: CompareCo
       }));
       return false;
     }
-  }, [adapter]);
+  }, [adapter, context]);
 
   const isDirty = !compareConfigs(state.draft, state.applied);
 

@@ -25,6 +25,14 @@ import {
   makeTextCellValue,
   normalizeDisplayValue,
 } from '../utils/cellFormatting';
+import {
+  readPersistentDataWithFallback,
+  readEditCapability,
+  subscribeIfAvailable,
+  writePersistentData,
+  type PersistentConfigRead,
+  type PersistentConfigScope,
+} from '../utils/configAccess';
 
 /**
  * Collapses the SDK's field types into the handful of shapes Compare View
@@ -300,27 +308,49 @@ export class BaseAdapter {
     }
   }
 
-  async getPersistentData(): Promise<unknown> {
-    return bitable.bridge.getData();
+  async getPersistentData(scope: PersistentConfigScope): Promise<PersistentConfigRead> {
+    return readPersistentDataWithFallback(
+      scope,
+      (key) => bitable.bridge.getData(key),
+      () => bitable.bridge.getData()
+    );
   }
 
   /**
    * The sole write operation in this project. It stores extension UI settings
    * through the official bridge and never changes Base records, fields, or views.
    */
-  async setPersistentData(data: Record<string, unknown>): Promise<void> {
-    await bitable.bridge.setData(undefined, data);
+  async setPersistentData(
+    scope: PersistentConfigScope,
+    data: Record<string, unknown>
+  ): Promise<void> {
+    await writePersistentData(scope, data, (key, value) => bitable.bridge.setData(key, value));
+  }
+
+  async migratePersistentData(scope: PersistentConfigScope, data: unknown): Promise<void> {
+    await writePersistentData(scope, data, (key, value) => bitable.bridge.setData(key, value));
   }
 
   async canEditBase(): Promise<boolean> {
-    return bitable.base.getPermission({
-      entity: PermissionEntity.Base,
-      type: OperationType.Editable,
-    });
+    return readEditCapability(
+      () => bitable.base.getPermission({
+        entity: PermissionEntity.Base,
+        type: OperationType.Editable,
+      }),
+      () => bitable.base.isEditable()
+    );
+  }
+
+  isMobileHost(): boolean {
+    try {
+      return bitable.util.isMobileLark();
+    } catch {
+      return false;
+    }
   }
 
   subscribeToPersistentData(listener: () => void): () => void {
-    return bitable.bridge.onDataChange(() => listener());
+    return subscribeIfAvailable(() => bitable.bridge.onDataChange(() => listener()));
   }
 
   subscribe(listener: () => void): () => void {
@@ -340,13 +370,13 @@ export class BaseAdapter {
     };
 
     const unsubscribe = [
-      bitable.base.onSelectionChange(scheduleRefresh),
-      table.onFieldAdd(scheduleRefresh),
-      table.onFieldDelete(scheduleRefresh),
-      table.onFieldModify(scheduleRefresh),
-      table.onRecordAdd(scheduleRefresh),
-      table.onRecordDelete(scheduleRefresh),
-      table.onRecordModify(scheduleRefresh),
+      subscribeIfAvailable(() => bitable.base.onSelectionChange(scheduleRefresh)),
+      subscribeIfAvailable(() => table.onFieldAdd(scheduleRefresh)),
+      subscribeIfAvailable(() => table.onFieldDelete(scheduleRefresh)),
+      subscribeIfAvailable(() => table.onFieldModify(scheduleRefresh)),
+      subscribeIfAvailable(() => table.onRecordAdd(scheduleRefresh)),
+      subscribeIfAvailable(() => table.onRecordDelete(scheduleRefresh)),
+      subscribeIfAvailable(() => table.onRecordModify(scheduleRefresh)),
     ];
 
     return () => {
