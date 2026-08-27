@@ -274,7 +274,7 @@ export const App = () => {
         <button
           type="button"
           className="primary-button"
-          disabled={!configReady}
+          disabled={controlsDisabled}
           onClick={() => setOpenPanel('records')}
         >
           {t('chooseRecords')}
@@ -322,7 +322,9 @@ export const App = () => {
     ) : config.remoteChanged ? (
       <span className="toolbar__status--warning">{t('remoteChanged')}</span>
     ) : !config.canSave ? (
-      <span>{t('configReadOnly')}</span>
+      <span>
+        {t(config.readOnlyReason === 'mobile' ? 'configMobileReadOnly' : 'configReadOnly')}
+      </span>
     ) : config.isDirty ? (
       <>
         <span className="toolbar__status-dot" aria-hidden="true" />

@@ -82,6 +82,7 @@ const messages = {
     changesSaved: '已保存',
     configLoading: '正在读取共享配置…',
     configReadOnly: '你没有编辑权限；可查看已保存的比较配置。',
+    configMobileReadOnly: '手机端当前仅支持查看；请在网页端修改并保存比较配置。',
     remoteChanged: '其他用户已更新共享配置；保存将以当前草稿为准。',
     configError: '共享配置暂时不可用；当前草稿不会写入。',
     candidateNoRecords: '没有记录符合当前插件筛选条件。',
@@ -201,6 +202,8 @@ const messages = {
     changesSaved: 'Saved',
     configLoading: 'Loading shared configuration…',
     configReadOnly: 'You do not have edit permission; you can view the saved comparison configuration.',
+    configMobileReadOnly:
+      'Mobile currently supports viewing only. Edit and save the comparison on the web.',
     remoteChanged: 'Someone else updated the shared configuration. Saving uses your current draft.',
     configError: 'The shared configuration is temporarily unavailable; the current draft will not be written.',
     candidateNoRecords: 'No records match this extension filter.',

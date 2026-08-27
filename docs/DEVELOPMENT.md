@@ -64,6 +64,15 @@ npm run check:opdev
 - Open the same extension in a second tab. Save in one tab and confirm the
   other tab refreshes its shared configuration; verify last successful save
   wins when both tabs have a draft.
+- Create the Compare View on the web or desktop client, save two or more
+  records, then open that existing view in the Feishu mobile app. Confirm the
+  same record order, visible fields, filters, sort, and grouping render without
+  a shared-configuration error; confirm the status explains that mobile is
+  view-only and no result-affecting control can be changed.
+- With a configuration saved by the previous release, open the upgraded view
+  once on an editable web host, then open it on mobile and confirm the legacy
+  payload was migrated. Save another web change and verify mobile receives it
+  through the data event or after manual refresh.
 - Check text, select, date, number, relation, and person values. For attachment
   cells, verify one and several images, a mixed image/PDF value, empty values,
   all thumbnails remaining directly visible, the read-only gallery, keyboard
@@ -80,7 +89,8 @@ npm run check:opdev
    `feat/compare-view-controls`.
 2. Make a conventional commit after staging only intended files. Inspect
    `git diff --check`, ignored local configuration, and the SDK write audit.
-3. Run `npm run typecheck`, `npm run build`, and the bilingual-document check.
+3. Run `npm run typecheck`, `npm run check:mobile-config`, `npm run build`, and
+   the bilingual-document check.
 4. Push the branch, then create a draft PR with an English description followed
    by its Chinese equivalent. Verify the PR head matches the branch.
 

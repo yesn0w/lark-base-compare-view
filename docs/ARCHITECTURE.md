@@ -19,7 +19,12 @@ orders the remaining candidates by their formatted primary-field title.
 
 The bridge payload is schema-versioned and scoped to the current table and
 view. It contains only extension settings: selected IDs, hidden IDs, filters,
-sort rules, and a group field. `DataChange` reloads shared configuration;
+sort rules, and a group field. `configAccess` reads an explicit per-table/view
+bridge key, falls back to the legacy default key, and migrates readable legacy
+data only when an editable web host is available. Shared-data reads, edit
+capability checks, and event subscriptions fail independently: an unsupported
+permission or subscription API makes the host read-only but never hides a
+successfully loaded configuration. `DataChange` reloads shared configuration;
 unsaved local drafts are retained and report a remote change.
 
 `useFieldValues` loads raw field values lazily for query controls.
@@ -36,7 +41,8 @@ state never enter the bridge payload.
 The installed `@lark-opdev/block-bitable-api` declarations provide these
 operations used by the adapter:
 
-- `bitable.base.getSelection()`, `getTableById()`, and `getPermission()`;
+- `bitable.base.getSelection()`, `getTableById()`, `getPermission()`, and the
+  compatibility fallback `isEditable()`;
 - table and view metadata, `getRecordIdList()`, and visible record IDs;
 - field `getFieldValueList()` with a raw-cell fallback;
 - `getCellString()` with `getCellValue()` formatting fallback, plus
@@ -44,6 +50,11 @@ operations used by the adapter:
 - table/base change listeners plus bridge theme and data-change listeners;
 - `bitable.bridge.getData()` and the single allowed mutation,
   `bitable.bridge.setData()`.
+
+Mobile detection stays in `BaseAdapter`. A mobile host reads the same explicit
+bridge key as the web host, skips edit-capability calls, and reports a
+view-only access reason to React. Unsupported host event registrations degrade
+to no-op subscriptions so initial rendering and manual refresh remain usable.
 
 No SDK call writes a Base record, cell, field, or view. If the active selection
 view is temporarily unavailable during a host switch, the adapter falls back to

@@ -63,7 +63,10 @@ configuration and **Reset** prepares default values for a later save.
 Saved configuration contains selected record IDs, hidden field IDs, filter
 rules, sort rules, and the group field. It is shared through Feishu’s official
 bridge data store. Base edit users may save; read-only users can load the last
-saved configuration. Concurrent saves use last-successful-write behavior.
+saved configuration. The Feishu mobile app also loads that saved configuration
+but keeps every result-affecting control read-only; creation and editing happen
+on the web or desktop client. Concurrent saves use last-successful-write
+behavior.
 
 Chinese/English choice, Feishu appearance, collapsed groups, row height, the
 differences-only filter, and the field-column width remain local to the current
@@ -79,6 +82,11 @@ view settings, add a backend or database, implement authentication or
 automation, download or upload attachments, or publish an extension package.
 The only permitted SDK mutation is bridge configuration storage; it is not a
 Base data write.
+
+Creating a Compare View from the Feishu mobile app is also outside the
+extension runtime. The host must create and bind the custom view before this
+React application can load, so mobile users open a view previously created on
+the web or desktop client.
 
 Difference marking compares the formatted display text of the compared records
 and reports only whether a field's values are identical. It is not a semantic

@@ -11,7 +11,7 @@
 - **draft（草稿）**驱动选择器与本地筛选/分组/排序控制；
 - **applied（已应用）**驱动矩阵，且只会在 `setData()` 成功后改变。
 
-Bridge 载荷带有 schema 版本并限定到当前数据表与视图。它只包含插件设置：所选 ID、隐藏 ID、筛选条件、排序规则和分组字段。`DataChange` 会重新加载共享配置；未保存的本地草稿会被保留，并提示远端发生变更。
+Bridge 载荷带有 schema 版本并限定到当前数据表与视图。它只包含插件设置：所选 ID、隐藏 ID、筛选条件、排序规则和分组字段。`configAccess` 优先读取按数据表/视图隔离的显式 Bridge key，再回退到旧默认 key；只有可编辑的网页宿主才会迁移已读到的旧数据。共享数据读取、编辑能力检查与事件订阅会独立失败：权限或订阅 API 不受支持时只会将宿主降级为只读，不会隐藏已经成功加载的配置。`DataChange` 会重新加载共享配置；未保存的本地草稿会被保留，并提示远端发生变更。
 
 `useFieldValues` 会按需加载查询控制所需的原始字段值。`queryEngine` 是纯函数：规范化值、筛选、稳定排序、将所选记录的手动顺序插入候选列表，并让一条记录最多进入一个分组。`useCellValues` 加载结构化矩阵值，其中包含稳定的显示文本以及仅存于内存的附件呈现元数据。
 
@@ -21,12 +21,14 @@ Bridge 载荷带有 schema 版本并限定到当前数据表与视图。它只�
 
 已安装的 `@lark-opdev/block-bitable-api` 声明提供了适配器所用的以下操作：
 
-- `bitable.base.getSelection()`、`getTableById()` 和 `getPermission()`；
+- `bitable.base.getSelection()`、`getTableById()`、`getPermission()`，以及兼容回退 `isEditable()`；
 - 表格与视图元数据、`getRecordIdList()` 和可见记录 ID；
 - 字段 `getFieldValueList()`，以及原始单元格值回退；
 - `getCellString()`、`getCellValue()` 格式化回退，以及用于图片附件的 `getCellThumbnailUrls()`；
 - 表格/Base 变更监听器，以及 Bridge 主题和数据变更监听器；
 - `bitable.bridge.getData()` 和唯一允许的可变操作 `bitable.bridge.setData()`。
+
+移动端判断保留在 `BaseAdapter` 中。手机宿主与网页宿主读取相同的显式 Bridge key，跳过编辑能力调用，并向 React 返回只读原因。宿主不支持的事件注册会降级为空订阅，使初次渲染和手动刷新仍然可用。
 
 没有 SDK 调用会写入 Base 的记录、单元格、字段或视图。如果宿主切换期间当前选区的视图暂时不可用，适配器会回退到该数据表的第一个可用视图，并在下一次选区变更时刷新。
 
