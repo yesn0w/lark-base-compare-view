@@ -17,6 +17,11 @@ export type QueryPanel = 'records' | 'field' | 'filter' | 'group' | 'sort' | 'ro
 interface QueryToolbarProps {
   locale: UiLocale;
   fields: CompareField[];
+  orderedFields: CompareField[];
+  wrappedFieldIds: Set<string>;
+  onFieldOrderChange: (ids: string[]) => void;
+  onResetFieldOrder: () => void;
+  onToggleFieldWrap: (id: string) => void;
   filters: CompareViewConfig['filters'];
   sortRules: CompareViewConfig['sortRules'];
   groupFieldId: string | null;
@@ -70,6 +75,7 @@ function ToolbarGlyph({ type }: { type: keyof typeof GLYPH_PATHS }) {
 export function QueryToolbar({
   locale,
   fields,
+  orderedFields, wrappedFieldIds, onFieldOrderChange, onResetFieldOrder, onToggleFieldWrap,
   filters,
   sortRules,
   groupFieldId,
@@ -198,6 +204,7 @@ export function QueryToolbar({
             className={`toolbar__button${hiddenFieldIds.size ? ' toolbar__button--active' : ''}${
               openPanel === 'field' ? ' toolbar__button--open' : ''
             }`}
+            aria-label={`${t('fieldsLabel')}${hiddenFieldIds.size ? ` ${hiddenFieldIds.size}` : ''}`}
             aria-expanded={openPanel === 'field'}
             aria-controls="query-popover-field"
             disabled={!ready}
@@ -213,7 +220,11 @@ export function QueryToolbar({
             'field',
             <FieldSelector
               locale={locale}
-              fields={fields}
+              fields={orderedFields}
+              wrappedFieldIds={wrappedFieldIds}
+              onOrderChange={onFieldOrderChange}
+              onResetOrder={onResetFieldOrder}
+              onToggleWrap={onToggleFieldWrap}
               hiddenFieldIds={hiddenFieldIds}
               disabled={disabled}
               onToggle={onToggleField}

@@ -1290,9 +1290,9 @@ select:disabled {
   height: 10px;
 }
 
-/* ---------------------------------------------------------- cell dialog -- */
+/* ---------------------------------------------------------- attachment dialog -- */
 
-.cell-dialog-backdrop {
+.attachment-dialog-backdrop {
   background: rgb(0 0 0 / 32%);
   display: grid;
   inset: 0;
@@ -1301,16 +1301,7 @@ select:disabled {
   z-index: 60;
 }
 
-.cell-dialog {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 12px 32px var(--shadow);
-  overflow: hidden;
-  width: min(420px, 88%);
-}
-
-.cell-dialog__header {
+.attachment-dialog__header {
   align-items: center;
   border-bottom: 1px solid var(--grid);
   display: flex;
@@ -1318,22 +1309,13 @@ select:disabled {
   padding: 10px 12px;
 }
 
-.cell-dialog__title {
+.attachment-dialog__title {
   flex: 1 1 auto;
   font-weight: 600;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.cell-dialog__body {
-  margin: 0;
-  max-height: 320px;
-  overflow: auto;
-  padding: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .attachment-dialog {
@@ -1451,3 +1433,39 @@ select:disabled {
     grid-row: 1 / 3;
   }
 }
+
+/* Field controls keep visibility and wrapping independent of the drag handle. */
+.field-selector-list { position: relative; }
+.field-selector__item { position: relative; gap: 8px; }
+.field-selector__label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.field-selector__label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.field-selector__wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.field-selector__item--before::before, .field-selector__item--after::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 2px; background: var(--accent-solid); pointer-events: none;
+}
+.field-selector__item--before::before { top: 0; }
+.field-selector__item--after::after { bottom: 0; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* Wrapped rows grow to their contents; the selected row height remains a minimum. */
+.compare-table__row--wrapped .cell-text,
+.compare-table__row--wrapped .cell-tag,
+.compare-table__row--wrapped .compare-table__field-name > span,
+.compare-table__row--wrapped .attachment-file-name,
+.compare-table__row--wrapped .attachment-file-names {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: visible;
+  text-overflow: clip;
+  max-height: none;
+  max-width: none;
+}
+.compare-table__row--wrapped .compare-table__cell,
+.compare-table__row--wrapped .compare-table__field-name { align-items: flex-start; }
+.compare-table__row--wrapped .attachment-cell { overflow: visible; }
+.row-collapse { flex: 0 0 auto; }
+
+.compare-table__row--wrapped .attachment-file-name { max-width: 88px; }
+
+.field-drag-handle { touch-action: none; user-select: none; }

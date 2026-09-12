@@ -2,9 +2,7 @@ import type { CellValueMap, CompareCellValue } from '../types/compare';
 import { EMPTY_CELL_VALUE, makeCellKey } from './cellFormatting';
 
 /**
- * Grid cells render on a single line, so anything longer than this is assumed
- * to be clipped and gets an inline expand action. Compare View is read-only,
- * so the expand dialog is the only way to read such a value in full.
+ * Non-wrapped text beyond this threshold gets an inline row expansion action.
  */
 const LONG_VALUE_LENGTH = 36;
 

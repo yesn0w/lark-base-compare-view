@@ -53,6 +53,8 @@ export function createDefaultCompareConfig(context: CompareContext): CompareView
     tableId: context.tableId,
     viewId: context.viewId,
     selectedRecordIds: [],
+    fieldOrderIds: [],
+    wrappedFieldIds: [],
     hiddenFieldIds: context.primaryFieldId ? [context.primaryFieldId] : [],
     filters: {
       conjunction: 'and',
@@ -68,6 +70,8 @@ export function cloneCompareConfig(config: CompareViewConfig): CompareViewConfig
     ...config,
     selectedRecordIds: [...config.selectedRecordIds],
     hiddenFieldIds: [...config.hiddenFieldIds],
+    fieldOrderIds: [...config.fieldOrderIds],
+    wrappedFieldIds: [...config.wrappedFieldIds],
     filters: {
       conjunction: config.filters.conjunction,
       rules: config.filters.rules.map((rule) => ({ ...rule, value: [...rule.value] })),
@@ -133,6 +137,10 @@ export function readCompareConfig(
     : context.primaryFieldId
       ? [context.primaryFieldId]
       : [];
+  const readFieldIds = (raw: unknown): string[] =>
+    isStringArray(raw) ? unique(raw.filter((id) => fieldIds.has(id))) : [];
+  const fieldOrderIds = readFieldIds(value.fieldOrderIds);
+  const wrappedFieldIds = readFieldIds(value.wrappedFieldIds);
   const filtersValue = value.filters;
   const filtersRecord =
     filtersValue && typeof filtersValue === 'object'
@@ -200,6 +208,8 @@ export function readCompareConfig(
     viewId: context.viewId,
     selectedRecordIds,
     hiddenFieldIds,
+    fieldOrderIds,
+    wrappedFieldIds,
     filters: { conjunction, rules },
     sortRules,
     groupFieldId,

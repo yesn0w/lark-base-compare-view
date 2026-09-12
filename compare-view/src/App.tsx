@@ -24,6 +24,7 @@ import {
   groupRecords,
   sortRecords,
 } from './utils/queryEngine';
+import { orderFields, retainExpandedFields } from './utils/fieldDisplay';
 import { DEFAULT_ROW_HEIGHT, type RowHeight } from './utils/rowHeight';
 
 function toggleGroupKey(
@@ -45,6 +46,7 @@ export const App = () => {
   // They are deliberately not part of the persisted compare configuration.
   const [rowHeight, setRowHeight] = useState<RowHeight>(DEFAULT_ROW_HEIGHT);
   const [diffOnly, setDiffOnly] = useState(false);
+  const [expandedFieldIds, setExpandedFieldIds] = useState<Set<string>>(new Set());
   const [openPanel, setOpenPanel] = useState<QueryPanel>(null);
   const sortResetKeyRef = useRef<string | null>(null);
   const theme = useFeishuTheme();
@@ -117,10 +119,17 @@ export const App = () => {
   const visibleFields = useMemo(
     () =>
       context && applied
-        ? context.fields.filter((field) => !applied.hiddenFieldIds.includes(field.id))
+        ? orderFields(context.fields, applied.fieldOrderIds).filter((field) => !applied.hiddenFieldIds.includes(field.id))
         : [],
     [applied, context]
   );
+  useEffect(() => {
+    setExpandedFieldIds(new Set());
+  }, [context?.tableId, context?.viewId]);
+  useEffect(() => {
+    setExpandedFieldIds((current) => retainExpandedFields(current, visibleFields.map((field) => field.id)));
+  }, [visibleFields]);
+  const refreshData = () => { setExpandedFieldIds(new Set()); void reload(); };
   const selectedIds = useMemo(() => appliedRecords.map((record) => record.id), [appliedRecords]);
   const cellValues = useCellValues(adapter, visibleFields, selectedIds);
   const currentSortKey = configSortKey(draft);
@@ -210,7 +219,7 @@ export const App = () => {
 
   // A loaded configuration can always be inspected; only editing needs permission.
   const configReady = config.status === 'ready' && Boolean(draft);
-  const controlsDisabled = !configReady || !config.canSave;
+  const controlsDisabled = !configReady || !config.canSave || config.saving;
   const selectedCandidateIdSet = new Set(candidateRecordIds);
   const hiddenSelectedCount = draft
     ? draft.selectedRecordIds.filter((recordId) => !selectedCandidateIdSet.has(recordId)).length
@@ -224,7 +233,7 @@ export const App = () => {
             title={t('unavailableTitle')}
             description={t('unavailableDescription')}
             action={
-              <button type="button" className="primary-button" onClick={reload}>
+              <button type="button" className="primary-button" onClick={refreshData}>
                 {t('retry')}
               </button>
             }
@@ -281,6 +290,9 @@ export const App = () => {
       pendingRecordIds={pendingRecordIds}
       values={cellValues.values}
       rowHeight={rowHeight}
+      wrappedFieldIds={new Set(applied?.wrappedFieldIds ?? [])}
+      expandedFieldIds={expandedFieldIds}
+      onToggleFieldExpansion={(id) => setExpandedFieldIds((current) => toggleId(current, id))}
       loading={cellValues.loading}
       disabled={controlsDisabled}
       onToggleGroup={(groupKey) =>
@@ -338,7 +350,7 @@ export const App = () => {
         title={t('refresh')}
         aria-label={t('refresh')}
         onClick={() => {
-          reload();
+          refreshData();
           void config.reloadSharedConfig();
         }}
       >
@@ -384,6 +396,13 @@ export const App = () => {
       <QueryToolbar
         locale={locale}
         fields={context.fields}
+        orderedFields={orderFields(context.fields, draft?.fieldOrderIds ?? [])}
+        wrappedFieldIds={new Set(draft?.wrappedFieldIds ?? [])}
+        onFieldOrderChange={(fieldOrderIds) => config.updateDraft((current) => ({ ...current, fieldOrderIds }))}
+        onResetFieldOrder={() => config.updateDraft((current) => ({ ...current, fieldOrderIds: [] }))}
+        onToggleFieldWrap={(id) => config.updateDraft((current) => ({
+          ...current, wrappedFieldIds: [...toggleId(new Set(current.wrappedFieldIds), id)],
+        }))}
         filters={draft?.filters ?? { conjunction: 'and', rules: [] }}
         sortRules={draft?.sortRules ?? []}
         groupFieldId={draft?.groupFieldId ?? null}

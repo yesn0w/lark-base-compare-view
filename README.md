@@ -26,8 +26,12 @@ and these staged comparison controls:
   never alter the native table view.
 - See how many fields differ across the compared records, mark those rows, and
   narrow the matrix to them with the differences-only filter.
-- Switch between four row heights and open a clipped value in a read-only
-  dialog.
+- Reorder visible and hidden fields together in the Fields popover and set
+  wrapping per field; save to share these settings. Drag the handle or use
+  Alt + Up/Down. Reset field order restores the adapter order.
+- Switch between four minimum row heights. Expand clipped text inline across
+  its field row, then collapse it; this temporary reading action also works
+  for read-only users and does not require saving.
 - See every image-attachment thumbnail directly in each cell, click any image
   to open the full in-extension gallery, and keep non-image files readable by
   name.

@@ -35,6 +35,7 @@ async function main() {
           ]
         };
         const markup = renderToStaticMarkup(React.createElement(CompareTable, {
+          wrappedFieldIds: new Set(), expandedFieldIds: new Set(), onToggleFieldExpansion() {},
           locale: 'en-US',
           fields: [field],
           groups: [{

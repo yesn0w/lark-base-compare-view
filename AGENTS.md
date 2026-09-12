@@ -26,10 +26,11 @@ changing underlying Base business data.
   extension-only compare configuration and must never be repurposed for Base
   business data.
 - Use bridge data only for selected record IDs, hidden fields, local query
-  rules, sort rules, and the group field. Do not persist language, theme, or
-  collapsed groups.
+  rules, sort rules, the group field, field order, and wrapped field IDs. Do not
+  persist language, theme, collapsed groups, or temporary row expansion.
 - Keep staged changes as a draft. The comparison matrix must use only the last
-  successfully saved configuration.
+  successfully saved configuration. Temporary row expansion is an immediate,
+  read-only presentation action and never marks the shared configuration dirty.
 - Support one or more selected records without a plugin-defined count limit,
   local filter/group/sort controls, horizontal scrolling, field visibility, and
   manual comparison-column ordering. Selection must not reorder candidates.
