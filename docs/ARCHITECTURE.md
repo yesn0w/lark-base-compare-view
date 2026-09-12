@@ -12,14 +12,15 @@ formatted values as record titles. Metadata position is never used to infer
 which field is primary. The adapter prioritizes current-view record order, then
 orders the remaining candidates by their formatted primary-field title.
 
-`useCompareConfig` keeps two typed configurations:
+`useCompareConfig` exposes two typed configurations plus pending width patches:
 
 - **draft** drives the selector and local filter/group/sort controls;
-- **applied** drives the matrix and changes only after `setData()` succeeds.
+- **applied** drives the matrix and changes only after `setData()` succeeds;
+- pending widths overlay the matrix immediately and share without submitting the draft.
 
 The bridge payload is schema-versioned and scoped to the current table and
 view. It contains only extension settings: selected IDs, hidden IDs, filters,
-sort rules, a group field, field order, and wrapped field IDs. `configAccess` reads an explicit per-table/view
+sort rules, a group field, field order, wrapped field IDs, and column widths. `configAccess` reads an explicit per-table/view
 bridge key, falls back to the legacy default key, and migrates readable legacy
 data only when an editable web host is available. Shared-data reads, edit
 capability checks, and event subscriptions fail independently: an unsupported
@@ -85,7 +86,7 @@ candidate positions. Dragging is available only on comparison column headers.
 
 `CompareTable` receives saved fields, grouped saved records, structured display
 values, and the set of differing field IDs. It owns matrix-only collapsible
-group controls, sticky headers, the sticky field column and its resize handle,
+group controls, sticky headers, the sticky field column and independent column resize handles,
 record column reordering and removal, inline field-row expansion, and
 the read-only attachment gallery. `StatBar` and `TableSkeleton` are
 presentational. None of these components recreates a Feishu native editor.
@@ -117,3 +118,30 @@ and may discard them on save; use the updated build in all test tabs.
 against saved visible fields. `CompareTable` combines saved wrapping and temporary
 expansion; `FieldSelector` edits only draft settings. Sorting and wrapping leave
 cell membership unchanged and therefore do not refetch loaded cells.
+
+## Column widths and image browsing
+
+Column widths are an immediate, automatically shared exception to other drafts.
+Sharing displays a separate status. Failure retains the local layout with Retry
+and Restore shared widths; Discard affects other drafts only. Ordinary Save waits
+for width sharing and stops if it fails. Refresh/source changes prompt when widths
+are pending; a full-page departure uses the browser's unsaved-change warning.
+
+Version 1 adds `fieldColumnWidth: number | null` (default `null`) and
+`recordColumnWidths: Record<string, number>` (default `{}`). Finite values are
+rounded and clamped; malformed values and deleted record IDs are removed. Widths
+for unselected existing records remain. Object key ordering is not a setting.
+Old builds may discard new settings on save; test all tabs with the current build.
+
+`ConfigController` separates applied settings, ordinary drafts and pending width
+patches. A single `ConfigWriteQueue` serializes reads/writes across sources. Width
+writes read the current shared configuration and patch only widths; ordinary saves
+merge the latest shared widths. A failed read never triggers a stale write. Pending
+local widths overlay remote changes; other columns update immediately. There is
+no cross-page atomic merge guarantee: simultaneous saves can still overwrite.
+
+`App` owns image positions by field/record within the source session. Sorting,
+group collapse, differences-only filtering and unrelated saves preserve them;
+saved hiding/removal, changed attachments, source changes and explicit refresh
+clear the affected positions. Images and URLs never enter shared configuration.
+Resizing and switching images do not change cell load keys or issue extra reads.

@@ -1,9 +1,7 @@
-import { useRef, useState, type DragEvent, type PointerEvent } from 'react';
+import { useState, type DragEvent } from 'react';
 import { translate } from '../i18n';
 import type {
   CellValueMap,
-  CompareCellAttachment,
-  CompareCellValue,
   CompareField,
   CompareRecordGroup,
   UiLocale,
@@ -11,21 +9,19 @@ import type {
 import { EMPTY_CELL_VALUE, makeCellKey } from '../utils/cellFormatting';
 import { isLongCellValue, readCellValue } from '../utils/compareDiff';
 import type { RowHeight } from '../utils/rowHeight';
-import {
-  AttachmentPreviewDialog,
-  type PreviewableAttachment,
-} from './AttachmentPreviewDialog';
+import { AttachmentPreviewDialog } from './AttachmentPreviewDialog';
+import { AttachmentCarousel } from './AttachmentCarousel';
+import { imageAttachments } from '../utils/attachmentGallery';
 import { FieldKindIcon } from './FieldKindIcon';
 
-const MIN_FIELD_COLUMN_WIDTH = 140;
-const MAX_FIELD_COLUMN_WIDTH = 420;
-const DEFAULT_FIELD_COLUMN_WIDTH = 200;
-const MIN_RECORD_COLUMN_WIDTH = 220;
-const RESIZE_KEYBOARD_STEP = 16;
-const ATTACHMENT_THUMBNAIL_GAP = 4;
-const CELL_HORIZONTAL_PADDING = 24;
+import { ColumnResizer } from './ColumnResizer';
+import { columnWidth, type WidthSettings, type ColumnId } from '../utils/columnWidths';
 
 interface CompareTableProps {
+  getImageIndex?: (fieldId: string, recordId: string) => number;
+  onImageIndexChange?: (fieldId: string, recordId: string, index: number) => void;
+  widths?: WidthSettings;
+  onColumnWidthChange?: (id: ColumnId, width: number | null) => void;
   locale: UiLocale;
   fields: CompareField[];
   groups: CompareRecordGroup[];
@@ -47,122 +43,13 @@ interface CompareTableProps {
 
 interface AttachmentPreview {
   title: string;
-  images: PreviewableAttachment[];
-  initialIndex: number;
-}
-
-function isPreviewableAttachment(
-  attachment: CompareCellAttachment
-): attachment is PreviewableAttachment {
-  return (
-    attachment.mimeType.toLowerCase().startsWith('image/') &&
-    Boolean(attachment.thumbnailUrl)
-  );
-}
-
-function getRecordColumnWidth(
-  fields: CompareField[],
-  values: CellValueMap,
-  recordId: string,
-  rowHeight: RowHeight
-): number {
-  const thumbnailSize = Math.min(36, Math.max(24, rowHeight - 8));
-  const maxImageCount = fields.reduce((count, field) => {
-    if (field.kind !== 'attachment') {
-      return count;
-    }
-
-    const imageCount = readCellValue(values, field.id, recordId).attachments.filter(
-      isPreviewableAttachment
-    ).length;
-    return Math.max(count, imageCount);
-  }, 0);
-  const attachmentWidth = maxImageCount
-    ? maxImageCount * thumbnailSize +
-      (maxImageCount - 1) * ATTACHMENT_THUMBNAIL_GAP +
-      CELL_HORIZONTAL_PADDING
-    : 0;
-
-  return Math.max(MIN_RECORD_COLUMN_WIDTH, attachmentWidth);
-}
-
-function AttachmentThumbnail({
-  attachment,
-  label,
-  onOpen,
-}: {
-  attachment: PreviewableAttachment;
-  label: string;
-  onOpen: () => void;
-}) {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <span className="attachment-file-name" title={attachment.name}>
-        {attachment.name}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className="attachment-thumbnail"
-      aria-label={`${label}: ${attachment.name}`}
-      title={attachment.name}
-      onClick={onOpen}
-    >
-      <img
-        src={attachment.thumbnailUrl}
-        alt={attachment.name}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-      />
-    </button>
-  );
-}
-
-function AttachmentCell({
-  locale,
-  value,
-  onPreview,
-}: {
-  locale: UiLocale;
-  value: CompareCellValue;
-  onPreview: (images: PreviewableAttachment[], initialIndex: number) => void;
-}) {
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const images = value.attachments.filter(isPreviewableAttachment);
-  const fallbackNames = value.attachments
-    .filter((attachment) => !isPreviewableAttachment(attachment))
-    .map((attachment) => attachment.name);
-
-  return (
-    <div className="attachment-cell">
-      {images.length ? (
-        <div className="attachment-thumbnails">
-          {images.map((attachment, index) => (
-            <AttachmentThumbnail
-              attachment={attachment}
-              label={t('previewAttachment')}
-              onOpen={() => onPreview(images, index)}
-              key={`${index}:${attachment.name}:${attachment.thumbnailUrl}`}
-            />
-          ))}
-        </div>
-      ) : null}
-      {fallbackNames.length ? (
-        <span className="attachment-file-names" title={fallbackNames.join(', ')}>
-          {fallbackNames.join(', ')}
-        </span>
-      ) : null}
-    </div>
-  );
+  fieldId: string;
+  recordId: string;
 }
 
 export function CompareTable({
+  getImageIndex = () => 0, onImageIndexChange = () => {},
+  widths = { fieldColumnWidth: null, recordColumnWidths: {} }, onColumnWidthChange,
   locale,
   fields,
   groups,
@@ -179,46 +66,30 @@ export function CompareTable({
   onMoveRecordBefore,
 }: CompareTableProps) {
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const [fieldColumnWidth, setFieldColumnWidth] = useState(DEFAULT_FIELD_COLUMN_WIDTH);
+  const [widthPreviews, setWidthPreviews] = useState<Map<ColumnId, number>>(new Map());
+  const widthFor = (id: ColumnId) => widthPreviews.get(id) ?? columnWidth(widths, id);
+  const fieldColumnWidth = widthFor(null);
   const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
+  const previewImages = attachmentPreview ? imageAttachments(readCellValue(values, attachmentPreview.fieldId, attachmentPreview.recordId).attachments) : [];
+  const previewVisible = attachmentPreview && fields.some(field => field.id === attachmentPreview.fieldId) && groups.some(group => group.records.some(record => record.id === attachmentPreview.recordId));
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const grouped = groups.some((group) => Boolean(group.label));
   const visibleGroups = groups.filter((group) => !collapsedGroupKeys.has(group.key));
+  const collapsedGroups = groups.filter(group => collapsedGroupKeys.has(group.key));
+  const restoreGroups = collapsedGroups.length ? <div className="collapsed-group-actions">
+    {collapsedGroups.map(group => <button type="button" className="text-button" key={group.key}
+      onClick={() => onToggleGroup(group.key)} aria-label={`${t('expandGroup')}: ${group.label}`}>{t('expandGroup')}: {group.label}</button>)}
+  </div> : null;
   const records = visibleGroups.flatMap((group) => group.records);
-  const recordColumnWidths = new Map(
-    records.map((record) => [
-      record.id,
-      getRecordColumnWidth(fields, values, record.id, rowHeight),
-    ])
-  );
-
-  const clampFieldColumnWidth = (width: number) =>
-    Math.min(MAX_FIELD_COLUMN_WIDTH, Math.max(MIN_FIELD_COLUMN_WIDTH, width));
-
-  const startResize = (event: PointerEvent<HTMLSpanElement>) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    resizeRef.current = { startX: event.clientX, startWidth: fieldColumnWidth };
-  };
-
-  const continueResize = (event: PointerEvent<HTMLSpanElement>) => {
-    const state = resizeRef.current;
-    if (!state) {
-      return;
-    }
-
-    setFieldColumnWidth(clampFieldColumnWidth(state.startWidth + event.clientX - state.startX));
-  };
-
-  const endResize = (event: PointerEvent<HTMLSpanElement>) => {
-    resizeRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  };
+  const recordColumnWidths = new Map(records.map(record => [record.id, widthFor(record.id)]));
+  const resizer = (id: ColumnId, title: string) => <ColumnResizer
+    label={`${t(id === null ? 'resizeFieldColumn' : 'resizeRecordColumn')}: ${title}`}
+    value={widthFor(id)} record={id !== null} disabled={disabled || !onColumnWidthChange}
+    onPreview={value => setWidthPreviews(current => {
+      const next = new Map(current); if (value === undefined) next.delete(id); else next.set(id, value); return next;
+    })} onCommit={value => onColumnWidthChange?.(id, value)} />;
 
   const finishDrag = () => {
     setDraggingId(null);
@@ -229,6 +100,7 @@ export function CompareTable({
     return (
       <section className="compare-table-section" aria-label={t('appTitle')}>
         <p className="table-status">{t('allGroupsCollapsed')}</p>
+        {restoreGroups}
       </section>
     );
   }
@@ -321,6 +193,7 @@ export function CompareTable({
             </svg>
           </button>
         </div>
+        {resizer(recordId, title)}
       </th>
     );
   };
@@ -329,25 +202,7 @@ export function CompareTable({
     <th scope="col" rowSpan={rowSpan} className="compare-table__field-header">
       <div className="compare-table__field-header-inner">
         <span>{t('fieldName')}</span>
-        <span
-          className="compare-table__resizer"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label={t('resizeFieldColumn')}
-          title={t('resizeFieldColumn')}
-          tabIndex={0}
-          onPointerDown={startResize}
-          onPointerMove={continueResize}
-          onPointerUp={endResize}
-          onPointerCancel={endResize}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-              event.preventDefault();
-              const delta = event.key === 'ArrowLeft' ? -RESIZE_KEYBOARD_STEP : RESIZE_KEYBOARD_STEP;
-              setFieldColumnWidth((current) => clampFieldColumnWidth(current + delta));
-            }
-          }}
-        />
+        {resizer(null, t('fieldName'))}
       </div>
     </th>
   );
@@ -358,17 +213,18 @@ export function CompareTable({
       aria-label={t('appTitle')}
       style={{ ['--field-column-width' as string]: `${fieldColumnWidth}px` }}
     >
+      {restoreGroups}
       {loading ? <p className="table-status">{t('tableLoading')}</p> : null}
       <div className="compare-table-scroll">
         <table
           className="compare-table"
           data-grouped={grouped ? 'true' : 'false'}
           style={{
-            minWidth:
+            width:
               fieldColumnWidth +
               records.reduce(
                 (width, record) =>
-                  width + (recordColumnWidths.get(record.id) ?? MIN_RECORD_COLUMN_WIDTH),
+                  width + (recordColumnWidths.get(record.id) ?? 220),
                 0
               ),
           }}
@@ -378,7 +234,7 @@ export function CompareTable({
             {records.map((record) => (
               <col
                 key={record.id}
-                style={{ width: recordColumnWidths.get(record.id) ?? MIN_RECORD_COLUMN_WIDTH }}
+                style={{ width: recordColumnWidths.get(record.id) ?? 220 }}
               />
             ))}
           </colgroup>
@@ -463,16 +319,10 @@ export function CompareTable({
                           {pendingValue ? (
                             <span className="cell-text cell-text--loading">{t('cellLoading')}</span>
                           ) : hasAttachments ? (
-                            <AttachmentCell
-                              locale={locale}
-                              value={value}
-                              onPreview={(images, initialIndex) => {
-                                setAttachmentPreview({
-                                  title: field.name,
-                                  images,
-                                  initialIndex,
-                                });
-                              }}
+                            <AttachmentCarousel locale={locale} value={value} label={`${field.name}: ${record.title}`}
+                              index={getImageIndex(field.id, record.id)}
+                              onIndexChange={index => onImageIndexChange(field.id, record.id, index)}
+                              onPreview={() => setAttachmentPreview({ title: `${field.name}: ${record.title}`, fieldId: field.id, recordId: record.id })}
                             />
                           ) : isTag ? (
                             <span className="cell-tag">{value.text}</span>
@@ -503,12 +353,13 @@ export function CompareTable({
         </table>
       </div>
 
-      {attachmentPreview ? (
+      {attachmentPreview && previewVisible && previewImages.length ? (
         <AttachmentPreviewDialog
           locale={locale}
           title={attachmentPreview.title}
-          images={attachmentPreview.images}
-          initialIndex={attachmentPreview.initialIndex}
+          images={previewImages}
+          currentIndex={getImageIndex(attachmentPreview.fieldId, attachmentPreview.recordId)}
+          onIndexChange={index => onImageIndexChange(attachmentPreview.fieldId, attachmentPreview.recordId, index)}
           onClose={() => setAttachmentPreview(null)}
         />
       ) : null}

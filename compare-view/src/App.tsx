@@ -25,6 +25,8 @@ import {
   sortRecords,
 } from './utils/queryEngine';
 import { orderFields, retainExpandedFields } from './utils/fieldDisplay';
+import { makeCellKey } from './utils/cellFormatting';
+import { imageIndex, attachmentSignature, retainImagePositions, type ImagePositions } from './utils/attachmentGallery';
 import { DEFAULT_ROW_HEIGHT, type RowHeight } from './utils/rowHeight';
 
 function toggleGroupKey(
@@ -46,12 +48,26 @@ export const App = () => {
   // They are deliberately not part of the persisted compare configuration.
   const [rowHeight, setRowHeight] = useState<RowHeight>(DEFAULT_ROW_HEIGHT);
   const [diffOnly, setDiffOnly] = useState(false);
+  const [imagePositions, setImagePositions] = useState<ImagePositions>({});
   const [expandedFieldIds, setExpandedFieldIds] = useState<Set<string>>(new Set());
   const [openPanel, setOpenPanel] = useState<QueryPanel>(null);
   const sortResetKeyRef = useRef<string | null>(null);
+  const [pendingReload, setPendingReload] = useState(false);
+  const reloadGuard = useRef<() => boolean>(() => true);
   const theme = useFeishuTheme();
-  const { status, context, adapter, reload } = useCompareContext();
+  const { status, context, adapter, reload } = useCompareContext(() => reloadGuard.current());
   const config = useCompareConfig(adapter, context);
+  reloadGuard.current = () => {
+    if (config.hasPendingWidths || config.widthSaving) { setPendingReload(true); return false; }
+    return true;
+  };
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (config.hasPendingWidths || config.widthSaving) { event.preventDefault(); event.returnValue = ''; }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, [config.hasPendingWidths, config.widthSaving]);
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
     translate(locale, key, values);
   const draft = config.draft;
@@ -124,14 +140,30 @@ export const App = () => {
     [applied, context]
   );
   useEffect(() => {
-    setExpandedFieldIds(new Set());
+    setExpandedFieldIds(new Set()); setImagePositions({});
   }, [context?.tableId, context?.viewId]);
   useEffect(() => {
     setExpandedFieldIds((current) => retainExpandedFields(current, visibleFields.map((field) => field.id)));
   }, [visibleFields]);
-  const refreshData = () => { setExpandedFieldIds(new Set()); void reload(); };
+  const refreshData = (force = false) => {
+    if (!force && !reloadGuard.current()) return;
+    setExpandedFieldIds(new Set()); setImagePositions({}); setPendingReload(false); reload(true);
+    void config.reloadSharedConfig();
+  };
   const selectedIds = useMemo(() => appliedRecords.map((record) => record.id), [appliedRecords]);
   const cellValues = useCellValues(adapter, visibleFields, selectedIds);
+  useEffect(() => {
+    setImagePositions(current => retainImagePositions(current, visibleFields.map(field => field.id), selectedIds, cellValues.values));
+  }, [visibleFields, selectedIds, cellValues.values]);
+  const getImageIndex = (fieldId: string, recordId: string) => {
+    const key = makeCellKey(fieldId, recordId);
+    return imageIndex(imagePositions, key, cellValues.values[key]?.attachments ?? []);
+  };
+  const changeImageIndex = (fieldId: string, recordId: string, index: number) => {
+    const key = makeCellKey(fieldId, recordId);
+    const attachments = cellValues.values[key]?.attachments ?? [];
+    setImagePositions(current => ({...current, [key]: {signature: attachmentSignature(attachments), index}}));
+  };
   const currentSortKey = configSortKey(draft);
 
   const differingFieldIds = useMemo(
@@ -233,7 +265,7 @@ export const App = () => {
             title={t('unavailableTitle')}
             description={t('unavailableDescription')}
             action={
-              <button type="button" className="primary-button" onClick={refreshData}>
+              <button type="button" className="primary-button" onClick={() => refreshData()}>
                 {t('retry')}
               </button>
             }
@@ -282,6 +314,10 @@ export const App = () => {
     <TableSkeleton locale={locale} columnCount={selectedIds.length} />
   ) : (
     <CompareTable
+      getImageIndex={getImageIndex}
+      onImageIndexChange={changeImageIndex}
+      widths={config.widths}
+      onColumnWidthChange={config.setWidth}
       locale={locale}
       fields={displayFields}
       groups={appliedGroups}
@@ -337,6 +373,13 @@ export const App = () => {
       <div className="toolbar__status" aria-live="polite">
         {saveStatus}
       </div>
+      {config.widthSaving || config.hasPendingWidths ? <div className="width-save-status" role="status">
+        <span>{t(config.widthError ? 'widthNotShared' : 'widthSharing')}</span>
+        {config.widthError ? <>
+          <button type="button" className="text-button" onClick={() => void config.retryWidths()}>{t('retry')}</button>
+          <button type="button" className="text-button" onClick={config.restoreWidths}>{t('restoreSharedWidths')}</button>
+        </> : null}
+      </div> : null}
       <label className="language-picker">
         <span className="visually-hidden">{t('language')}</span>
         <select value={locale} onChange={(event) => setLocale(event.target.value as UiLocale)}>
@@ -351,7 +394,6 @@ export const App = () => {
         aria-label={t('refresh')}
         onClick={() => {
           refreshData();
-          void config.reloadSharedConfig();
         }}
       >
         <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -456,6 +498,13 @@ export const App = () => {
         />
       ) : null}
 
+      {pendingReload ? <div className="width-navigation-warning" role="alert">
+        <span>{t('pendingWidthNavigation')}</span>
+        <button type="button" className="text-button" disabled={config.widthSaving}
+          onClick={() => void config.retryWidths().then(ok => { if (ok) refreshData(true); })}>{t('retry')}</button>
+        <button type="button" className="text-button" disabled={config.widthSaving}
+          onClick={() => { config.restoreWidths(); refreshData(true); }}>{t('discardWidthsContinue')}</button>
+      </div> : null}
       <div className="panel-body">{comparison}</div>
     </main>
   );

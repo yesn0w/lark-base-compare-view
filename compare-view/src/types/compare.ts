@@ -78,6 +78,8 @@ export interface CompareViewConfig {
   hiddenFieldIds: string[];
   fieldOrderIds: string[];
   wrappedFieldIds: string[];
+  fieldColumnWidth: number | null;
+  recordColumnWidths: Record<string, number>;
   filters: {
     conjunction: FilterConjunction;
     rules: CompareFilterRule[];

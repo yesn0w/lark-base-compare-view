@@ -76,7 +76,7 @@ npm run check:opdev
   through the data event or after manual refresh.
 - Check text, select, date, number, relation, and person values. For attachment
   cells, verify one and several images, a mixed image/PDF value, empty values,
-  all thumbnails remaining directly visible, the read-only gallery, keyboard
+  one large current image, unavailable images retaining their position, the read-only gallery, keyboard
   navigation, and a filename fallback when a preview cannot load.
 - Switch Feishu between light and dark appearance and confirm the view updates
   without a reload.
@@ -132,3 +132,18 @@ Also inspect light/dark and mobile read-only layouts, immediate row expansion,
 and retained expansion across filters and unrelated saves. Record physical-device
 coverage separately. Use existing records and fixtures for 100/500-record checks;
 no fixed rendering latency or virtual scrolling is promised.
+
+## Column width and attachment validation
+
+Run `npm test`, `npm run typecheck`, `npm run build`, `git diff --check`, the
+paired-document checker, and the SDK write audit. Validate pointer/keyboard resize,
+cancellation/defaults, exact width sums, draft isolation, failed read/write retry
+and restore, serial saves, source disposal, and shared updates. Exercise single,
+multiple, missing, failed, mixed and empty attachments; verify 240px stages, preview
+synchronization, temporary state cleanup and zero extra cell reads. Use local
+100/500-record fixtures (20 fields), including dark and mobile read-only layouts.
+
+Use the configured real Feishu page and existing records only. Record configuration
+before testing, restore all settings afterward, wait for writes, and reload to verify.
+Record actual large-test results and separately identify physical-phone testing;
+simulation does not replace it. Do not upload/publish the extension.

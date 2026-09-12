@@ -60,26 +60,26 @@ async function main() {
           onMoveRecordBefore() {}
         }));
 
-        assert.equal((markup.match(/<img\\b/g) ?? []).length, 8, 'renders every image thumbnail');
+        assert.equal((markup.match(/<img\\b/g) ?? []).length, 1, 'mounts only the current image');
         assert.equal(
-          (markup.match(/class="attachment-thumbnail"/g) ?? []).length,
-          8,
-          'makes every image thumbnail clickable'
+          (markup.match(/class="attachment-image-button"/g) ?? []).length,
+          1,
+          'makes the current image clickable'
         );
         assert.ok(
           markup.includes('src="https://example.invalid/image-1.png"'),
           'renders the SDK-provided thumbnail URL'
         );
         assert.match(markup, /alt="image-1\.png"/);
-        assert.match(markup, /alt="image-8\.png"/, 'keeps every image directly accessible');
+        assert.doesNotMatch(markup, /alt="image-8\.png"/, 'does not preload other gallery images');
+        assert.match(markup, />1 of 9</, 'unavailable images retain their place');
         assert.match(markup, /loading="lazy"/);
         assert.doesNotMatch(markup, />\\+\\d+</, 'does not collapse images behind a count');
         assert.match(
           markup,
-          /min-width:664px/,
-          'widens the matrix so every thumbnail remains directly visible'
+          /width:640px/,
+          'uses exact default column widths independent of attachment count'
         );
-        assert.match(markup, /failed\.png/, 'falls back to a filename when no thumbnail is available');
         assert.match(markup, /guide\.pdf/, 'keeps non-image attachments readable');
         assert.match(markup, />—</, 'keeps empty attachment cells readable');
 
@@ -87,7 +87,8 @@ async function main() {
           locale: 'en-US',
           title: 'Product files',
           images,
-          initialIndex: 1,
+          currentIndex: 1,
+          onIndexChange() {},
           onClose() {}
         }));
         assert.match(dialogMarkup, /role="dialog"/);
