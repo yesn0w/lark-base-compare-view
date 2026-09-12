@@ -51,12 +51,13 @@ npm run check:opdev
   table records after them.
 - Select one record, confirm the matrix does not change, click Save, and then
   confirm its column appears. Repeat with 2–10 records.
-- Confirm there is one unified candidate list only: a selected row has a dot
-  drag handle before its checkbox, and dragging it changes the selected order.
+- Confirm the unified candidate list has no drag handles. With candidates A,
+  B, C, select C then A: candidates must remain A, B, C, while saved columns
+  appear as C, A. Uncheck and reselect C to append it after A.
 - Add and remove text, choice, number, date, and checkbox filters. Confirm they
   affect only candidate rows, while saved filtered-out records stay in matrix.
 - Add multi-rule sorting, confirm changing it resets selected order, then drag
-  a selected row to make a manual adjustment.
+  a comparison column header to make a manual adjustment.
 - Group by a choice and a multi-value field; confirm each record appears in one
   group only, and test local candidate/matrix group collapse.
 - Hide and restore fields, including the primary field. Confirm all result

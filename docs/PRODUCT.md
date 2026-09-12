@@ -18,9 +18,10 @@ Compare View renders fields vertically and saved records horizontally.
 - All controls live on one toolbar: records, fields, filter, group, sort, and
   row height, with save state and the save actions at its trailing end.
 - Select 1–10 records in a single candidate list inside the **Records**
-  popover, which also offers a search box and a clear action. Each selected row
-  has a drag handle before its checkbox. Dragging changes saved comparison
-  order; a separate selected-record list is intentionally not shown.
+  popover, which also offers a search box and a clear action. Checking or
+  unchecking never reorders candidates. New selections append to the comparison
+  order; deselecting and reselecting appends again. Only comparison headers
+  support manual dragging, and changes apply after saving.
 - A status bar under the toolbar reports compared records, visible fields, and
   how many fields differ, and offers a **Differences only** filter that hides
   fields whose compared values are identical.

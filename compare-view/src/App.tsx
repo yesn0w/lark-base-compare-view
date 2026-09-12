@@ -17,14 +17,12 @@ import {
   MAX_COMPARE_RECORDS,
   MIN_COMPARE_RECORDS,
   moveSelectedRecordBefore,
-  moveSelectedRecordToCandidatePosition,
   orderSelectedRecordIdsByRecords,
   toggleId,
 } from './utils/compareState';
 import {
-  filterRecords,
+  deriveCandidateRecords,
   groupRecords,
-  mergeSelectedOrderIntoCandidates,
   sortRecords,
 } from './utils/queryEngine';
 import { DEFAULT_ROW_HEIGHT, type RowHeight } from './utils/rowHeight';
@@ -86,19 +84,7 @@ export const App = () => {
       return [];
     }
 
-    const filtered = queryValuesReady
-      ? filterRecords(
-          context.records,
-          context,
-          draft.filters.rules,
-          draft.filters.conjunction,
-          fieldValues.values
-        )
-      : context.records;
-    const sorted = queryValuesReady
-      ? sortRecords(filtered, context.fields, draft.sortRules, fieldValues.values, locale)
-      : filtered;
-    return mergeSelectedOrderIntoCandidates(sorted, draft.selectedRecordIds);
+    return deriveCandidateRecords(context, draft, fieldValues.values, locale, queryValuesReady);
   }, [context, draft, fieldValues.values, locale, queryValuesReady]);
   const candidateGroups = useMemo(
     () =>
@@ -420,17 +406,6 @@ export const App = () => {
             onToggle={toggleRecord}
             onClearSelection={() =>
               config.updateDraft((current) => ({ ...current, selectedRecordIds: [] }))
-            }
-            onMoveBefore={(recordId, targetRecordId) =>
-              config.updateDraft((current) => ({
-                ...current,
-                selectedRecordIds: moveSelectedRecordToCandidatePosition(
-                  current.selectedRecordIds,
-                  candidateRecordIds,
-                  recordId,
-                  targetRecordId
-                ),
-              }))
             }
             onToggleGroup={(groupKey) =>
               setCandidateCollapsedGroups((current) => toggleGroupKey(current, groupKey))

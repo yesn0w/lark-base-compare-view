@@ -28,9 +28,9 @@ successfully loaded configuration. `DataChange` reloads shared configuration;
 unsaved local drafts are retained and report a remote change.
 
 `useFieldValues` loads raw field values lazily for query controls.
-`queryEngine` is pure: it normalizes values, filters, stably sorts, inserts the
-manual selected-record order into the candidate list, and places a record in at
-most one group. `useCellValues` loads structured matrix values containing stable
+`queryEngine` is pure: it normalizes values, filters, stably sorts, and places a
+record in at most one group. `deriveCandidateRecords` derives candidate order
+from query rules without depending on selected-record or comparison-column order. `useCellValues` loads structured matrix values containing stable
 display text plus in-memory attachment presentation metadata.
 
 The host theme and language are presentational state. Language and collapse
@@ -69,8 +69,8 @@ records panel and the save actions in as slots, keeping draft and configuration
 wiring out of the toolbar.
 
 `RecordSelector` renders that records panel: every selectable record in one
-list, plus a local search box. Its draggable handle is enabled only for
-selected rows, while the following checkbox controls selection.
+list, plus a local search box. Checkboxes change selection without changing
+candidate positions. Dragging is available only on comparison column headers.
 
 `CompareTable` receives saved fields, grouped saved records, structured display
 values, and the set of differing field IDs. It owns matrix-only collapsible
