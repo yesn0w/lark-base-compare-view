@@ -12,9 +12,9 @@ Compare View renders fields vertically and saved records horizontally.
 
 - The candidate source is the whole current table. The current view’s visible
   record order comes first; remaining records follow in primary-field order.
-- Field selection and matrix rows place the SDK-identified primary field first;
-  all other fields retain their table metadata order. The current view does not
-  reorder fields in Compare View.
+- Default field order follows the adapter: the SDK-identified primary field
+  first, followed by table metadata order. The Fields popover can stage a
+  different order for visible and hidden fields together.
 - All controls live on one toolbar: records, fields, filter, group, sort, and
   row height, with save state and the save actions at its trailing end.
 - Select one or more records without a plugin-defined count limit in a single
@@ -28,9 +28,14 @@ Compare View renders fields vertically and saved records horizontally.
   fields whose compared values are identical.
 - A field whose compared values are not all identical is marked with a colored
   bar on its row header, and its cells are emphasized.
-- Row height offers four densities. Grid text stays on one line; a value too
-  long for its cell gets an inline expand action that opens it in a read-only
-  dialog.
+- Row height offers four minimum heights. Each field can wrap independently,
+  including labels, tags, and attachment filenames. Wrapping preserves newlines
+  and breaks long strings within the existing column width; rows grow to fit.
+  Image sizes, arrangement, and preview remain unchanged.
+- Non-attachment text longer than 36 characters or containing a newline offers
+  Expand when its row is not wrapped. It immediately expands the entire row;
+  Collapse beside the field name restores the saved wrapping setting. Multiple
+  rows may expand, including on read-only/mobile hosts.
 - An attachment cell shows every image thumbnail directly. Clicking any image
   opens a read-only gallery with keyboard navigation; record columns widen and
   use the matrix's horizontal scroll when needed, while non-image files and
@@ -62,12 +67,12 @@ Compare View renders fields vertically and saved records horizontally.
 
 ## Save and sharing
 
-All result-affecting controls are drafts. **Save** is the only action that
-updates the comparison matrix; **Discard** restores the last saved
+Shared comparison controls are drafts. **Save** applies those settings to
+the comparison matrix; **Discard** restores the last saved
 configuration and **Reset** prepares default values for a later save.
 
 Saved configuration contains selected record IDs, hidden field IDs, filter
-rules, sort rules, and the group field. It is shared through Feishu’s official
+rules, sort rules, the group field, field order, and wrapped field IDs. It is shared through Feishu’s official
 bridge data store. Base edit users may save; read-only users can load the last
 saved configuration. The Feishu mobile app also loads that saved configuration
 but keeps every result-affecting control read-only; creation and editing happen
@@ -79,7 +84,7 @@ last successful comparison are retained. Older plugin versions still truncate
 selections when reading, so use the updated version in every validation tab.
 
 Chinese/English choice, Feishu appearance, collapsed groups, row height, the
-differences-only filter, and the field-column width remain local to the current
+differences-only filter, and the field-column width and temporary row expansion remain local to the current
 session.
 
 Attachment thumbnail URLs are temporary presentation data. They remain only in
@@ -102,3 +107,18 @@ Difference marking compares the formatted display text of the compared records
 and reports only whether a field's values are identical. It is not a semantic
 or numeric diff: it computes no deltas, no per-character ranges, and no
 field-type-aware comparison.
+
+## Field display controls
+
+The Fields popover has a drag handle, visibility checkbox, field name, and wrap
+switch per item. Hidden fields remain in the same ordered list, retain wrapping,
+and return to their position when shown. Handle dragging supports insertion at
+both ends and edge scrolling; Alt + Up/Down provides keyboard movement and a
+position announcement. Show/Hide all changes only visibility; Reset field order
+changes only order. These actions require edit permission and are disabled while
+saving. Discard and failed saves preserve the last successful matrix.
+
+Temporary expansion survives sorting, grouping, differences-only filtering, and
+unrelated saves. Hiding or deleting a field clears that field's expansion;
+changing source, refreshing data, or reloading clears all temporary expansion.
+Turning saved wrapping off leaves a temporarily expanded row open until Collapse.

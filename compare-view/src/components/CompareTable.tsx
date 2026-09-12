@@ -15,7 +15,6 @@ import {
   AttachmentPreviewDialog,
   type PreviewableAttachment,
 } from './AttachmentPreviewDialog';
-import { CellExpandDialog } from './CellExpandDialog';
 import { FieldKindIcon } from './FieldKindIcon';
 
 const MIN_FIELD_COLUMN_WIDTH = 140;
@@ -36,16 +35,14 @@ interface CompareTableProps {
   pendingRecordIds: Set<string>;
   values: CellValueMap;
   rowHeight: RowHeight;
+  wrappedFieldIds: Set<string>;
+  expandedFieldIds: Set<string>;
+  onToggleFieldExpansion: (fieldId: string) => void;
   loading: boolean;
   disabled?: boolean;
   onToggleGroup: (groupKey: string) => void;
   onRemoveRecord: (recordId: string) => void;
   onMoveRecordBefore: (recordId: string, targetRecordId: string) => void;
-}
-
-interface ExpandedCell {
-  title: string;
-  value: string;
 }
 
 interface AttachmentPreview {
@@ -174,6 +171,7 @@ export function CompareTable({
   pendingRecordIds,
   values,
   rowHeight,
+  wrappedFieldIds, expandedFieldIds, onToggleFieldExpansion,
   loading,
   disabled = false,
   onToggleGroup,
@@ -182,7 +180,6 @@ export function CompareTable({
 }: CompareTableProps) {
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
   const [fieldColumnWidth, setFieldColumnWidth] = useState(DEFAULT_FIELD_COLUMN_WIDTH);
-  const [expandedCell, setExpandedCell] = useState<ExpandedCell | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -419,10 +416,13 @@ export function CompareTable({
           <tbody>
             {fields.map((field) => {
               const differs = differingFieldIds.has(field.id);
+              const expanded = expandedFieldIds.has(field.id);
+              const wrapped = wrappedFieldIds.has(field.id) || expanded;
 
               return (
                 <tr
-                  className={differs ? 'compare-table__row--diff' : undefined}
+                  className={[differs ? 'compare-table__row--diff' : '', wrapped ? 'compare-table__row--wrapped' : ''].filter(Boolean).join(' ')}
+                  data-field-id={field.id}
                   key={field.id}
                   style={{
                     height: rowHeight,
@@ -433,6 +433,10 @@ export function CompareTable({
                     <div className="compare-table__field-name">
                       <FieldKindIcon kind={field.kind} />
                       <span>{field.name}</span>
+                      {expanded ? (
+                        <button type="button" className="link-button row-collapse" aria-label={`${t('collapseRow')}: ${field.name}`}
+                          onClick={() => onToggleFieldExpansion(field.id)}>{t('collapseRow')}</button>
+                      ) : null}
                       {field.isPrimary ? (
                         <small className="field-tag" title={t('primaryField')}>
                           {t('primaryFieldShort')}
@@ -463,7 +467,6 @@ export function CompareTable({
                               locale={locale}
                               value={value}
                               onPreview={(images, initialIndex) => {
-                                setExpandedCell(null);
                                 setAttachmentPreview({
                                   title: field.name,
                                   images,
@@ -478,13 +481,12 @@ export function CompareTable({
                               {value.text}
                             </span>
                           )}
-                          {!pendingValue && isLongCellValue(value.text) ? (
+                          {!pendingValue && field.kind !== 'attachment' && !wrapped && isLongCellValue(value.text) ? (
                             <button
                               type="button"
                               className="link-button cell-expand"
                               onClick={() => {
-                                setAttachmentPreview(null);
-                                setExpandedCell({ title: field.name, value: value.text });
+                                onToggleFieldExpansion(field.id);
                               }}
                             >
                               {t('expandCell')}
@@ -501,14 +503,6 @@ export function CompareTable({
         </table>
       </div>
 
-      {expandedCell ? (
-        <CellExpandDialog
-          locale={locale}
-          title={expandedCell.title}
-          value={expandedCell.value}
-          onClose={() => setExpandedCell(null)}
-        />
-      ) : null}
       {attachmentPreview ? (
         <AttachmentPreviewDialog
           locale={locale}

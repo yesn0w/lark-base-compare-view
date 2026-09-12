@@ -63,7 +63,7 @@ export function AttachmentPreviewDialog({
   }
 
   return (
-    <div className="cell-dialog-backdrop" onClick={onClose}>
+    <div className="attachment-dialog-backdrop" onClick={onClose}>
       <div
         className="attachment-dialog"
         role="dialog"
@@ -71,8 +71,8 @@ export function AttachmentPreviewDialog({
         aria-label={`${t('attachmentPreview')}: ${currentImage.name}`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="cell-dialog__header">
-          <span className="cell-dialog__title" title={`${title}: ${currentImage.name}`}>
+        <div className="attachment-dialog__header">
+          <span className="attachment-dialog__title" title={`${title}: ${currentImage.name}`}>
             {title}: {currentImage.name}
           </span>
           <button

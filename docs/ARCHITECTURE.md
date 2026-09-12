@@ -19,7 +19,7 @@ orders the remaining candidates by their formatted primary-field title.
 
 The bridge payload is schema-versioned and scoped to the current table and
 view. It contains only extension settings: selected IDs, hidden IDs, filters,
-sort rules, and a group field. `configAccess` reads an explicit per-table/view
+sort rules, a group field, field order, and wrapped field IDs. `configAccess` reads an explicit per-table/view
 bridge key, falls back to the legacy default key, and migrates readable legacy
 data only when an editable web host is available. Shared-data reads, edit
 capability checks, and event subscriptions fail independently: an unsupported
@@ -86,7 +86,7 @@ candidate positions. Dragging is available only on comparison column headers.
 `CompareTable` receives saved fields, grouped saved records, structured display
 values, and the set of differing field IDs. It owns matrix-only collapsible
 group controls, sticky headers, the sticky field column and its resize handle,
-record column reordering and removal, `CellExpandDialog` for clipped values, and
+record column reordering and removal, inline field-row expansion, and
 the read-only attachment gallery. `StatBar` and `TableSkeleton` are
 presentational. None of these components recreates a Feishu native editor.
 
@@ -101,3 +101,19 @@ markers, and the differences-only filter.
 `CompareField.kind` collapses the SDK's field types into the shapes the grid
 renders differently. `BaseAdapter` computes it so that `FieldType` stays behind
 the SDK boundary and the React layer stays SDK-free.
+
+## Field presentation state
+
+Version 1 adds `fieldOrderIds` and `wrappedFieldIds`, both defaulting to `[]`.
+Missing or malformed arrays default empty; valid arrays are deduplicated and
+filtered to existing field IDs. Empty field order uses source order. `orderFields`
+places configured IDs first and appends remaining fields in source order; the
+same pure function drives draft controls and applied rows. New fields are visible
+and unwrapped; default primary-field hiding is unchanged. Cloning separates both
+arrays between draft and applied configuration. Old builds ignore these settings
+and may discard them on save; use the updated build in all test tabs.
+
+`App` owns temporary expanded IDs independently of shared config and prunes them
+against saved visible fields. `CompareTable` combines saved wrapping and temporary
+expansion; `FieldSelector` edits only draft settings. Sorting and wrapping leave
+cell membership unchanged and therefore do not refetch loaded cells.

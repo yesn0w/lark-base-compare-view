@@ -27,7 +27,13 @@ export function FieldSelector({
   const [announcement, setAnnouncement] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const pointerY = useRef<number | null>(null);
-  const finishDrag = () => { setDraggingId(null); setTarget(null); pointerY.current = null; };
+  const pointer = useRef<{ id: string; startX: number; startY: number; moving: boolean } | null>(null);
+  const targetRef = useRef<{ id: string; after: boolean } | null>(null);
+  const updateTarget = (next: { id: string; after: boolean } | null) => {
+    targetRef.current = next;
+    setTarget((current) => current?.id === next?.id && current?.after === next?.after ? current : next);
+  };
+  const finishDrag = () => { setDraggingId(null); updateTarget(null); pointerY.current = null; pointer.current = null; };
 
   useEffect(() => {
     if (!draggingId || disabled) return;
@@ -43,12 +49,12 @@ export function FieldSelector({
         const rows = Array.from(list.querySelectorAll<HTMLElement>('[data-field-id]'));
         const row = rows.find((item) => {
           const bounds = item.getBoundingClientRect();
-          return y >= bounds.top && y <= bounds.bottom;
-        });
+          return y <= bounds.bottom;
+        }) ?? rows[rows.length - 1];
         if (row) {
           const bounds = row.getBoundingClientRect();
           const next = { id: row.dataset.fieldId!, after: y > (bounds.top + bounds.bottom) / 2 };
-          setTarget((current) => current?.id === next.id && current.after === next.after ? current : next);
+          updateTarget(next);
         }
       }
       frame = requestAnimationFrame(scroll);
@@ -84,36 +90,51 @@ export function FieldSelector({
       </div>
       <p className="sr-only" id="field-order-help">{t('fieldOrderKeyboard')}</p>
       <p className="sr-only" role="status" aria-live="polite">{announcement}</p>
-      <div className="selector-list field-selector-list" role="group" aria-label={t('fields')} ref={listRef}
-        onDragOver={(event) => {
-          if (!draggingId || disabled) return;
-          event.preventDefault(); event.dataTransfer.dropEffect = 'move'; pointerY.current = event.clientY;
-        }}
-        onDragLeave={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-            pointerY.current = null; setTarget(null);
-          }
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          if (draggingId && target && !disabled) move(draggingId, target.id, target.after);
-          finishDrag();
-        }}>
+      <div className="selector-list field-selector-list" role="group" aria-label={t('fields')} ref={listRef}>
         {fields.map((field, index) => (
           <div className={`selector-list__item field-selector__item${target?.id === field.id && draggingId !== field.id ? ` field-selector__item--${target.after ? 'after' : 'before'}` : ''}`}
-            key={field.id} data-field-id={field.id}
-            onDragOver={(event) => {
-              if (!draggingId || disabled) return;
-              const rect = event.currentTarget.getBoundingClientRect();
-              setTarget({ id: field.id, after: event.clientY > (rect.top + rect.bottom) / 2 });
-            }}>
-            <button type="button" className="drag-handle" draggable={!disabled} disabled={disabled}
+            key={field.id} data-field-id={field.id}>
+            <button type="button" className="drag-handle field-drag-handle" disabled={disabled}
               aria-label={`${t('dragField')}: ${field.name}`} aria-describedby="field-order-help" title={t('fieldOrderKeyboard')}
-              onDragStart={(event) => {
-                if (disabled) { event.preventDefault(); return; }
-                event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', field.id);
-                setDraggingId(field.id);
-              }} onDragEnd={finishDrag}
+              onPointerDown={(event) => {
+                if (disabled || event.button !== 0) return;
+                event.preventDefault();
+                event.currentTarget.focus();
+                event.currentTarget.setPointerCapture(event.pointerId);
+                pointer.current = { id: field.id, startX: event.clientX, startY: event.clientY, moving: false };
+              }}
+              onPointerMove={(event) => {
+                const state = pointer.current;
+                const list = listRef.current;
+                if (!state || !list || disabled) return;
+                if (!state.moving && Math.hypot(event.clientX - state.startX, event.clientY - state.startY) < 4) return;
+                state.moving = true;
+                setDraggingId(state.id);
+                const bounds = list.getBoundingClientRect();
+                if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top - 32 || event.clientY > bounds.bottom + 32) {
+                  pointerY.current = null; updateTarget(null); return;
+                }
+                const y = Math.max(bounds.top + 1, Math.min(bounds.bottom - 1, event.clientY));
+                pointerY.current = y;
+                const rows = Array.from(list.querySelectorAll<HTMLElement>('[data-field-id]'));
+                const row = rows.find((item) => {
+                  const rect = item.getBoundingClientRect();
+                  return y <= rect.bottom;
+                }) ?? rows[rows.length - 1];
+                if (row) {
+                  const rect = row.getBoundingClientRect();
+                  updateTarget({ id: row.dataset.fieldId!, after: y > (rect.top + rect.bottom) / 2 });
+                }
+              }}
+              onPointerUp={(event) => {
+                const state = pointer.current;
+                const drop = targetRef.current;
+                if (state?.moving && drop) move(state.id, drop.id, drop.after);
+                if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+                finishDrag();
+              }}
+              onPointerCancel={finishDrag}
+              onLostPointerCapture={finishDrag}
               onKeyDown={(event) => {
                 if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
                 event.preventDefault();

@@ -66,6 +66,7 @@ export async function check() {
     groups={[{ key: 'all', label: '', records: [{ id: 'r0', title: 'A' }, { id: 'r1', title: 'B' }] }]}
     values={{ 'f0::r0': makeTextCellValue(null) }} rowHeight={32} loading={true}
     collapsedGroupKeys={new Set()} differingFieldIds={new Set()} pendingRecordIds={new Set()}
+    wrappedFieldIds={new Set()} expandedFieldIds={new Set()} onToggleFieldExpansion={() => {}}
     onToggleGroup={() => {}} onRemoveRecord={() => {}} onMoveRecordBefore={() => {}}
   />);
   assert.equal((markup.match(/cell-text--loading/g) ?? []).length, 1, 'only the missing cell has a loading placeholder');

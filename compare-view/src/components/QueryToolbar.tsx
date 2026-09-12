@@ -204,6 +204,7 @@ export function QueryToolbar({
             className={`toolbar__button${hiddenFieldIds.size ? ' toolbar__button--active' : ''}${
               openPanel === 'field' ? ' toolbar__button--open' : ''
             }`}
+            aria-label={`${t('fieldsLabel')}${hiddenFieldIds.size ? ` ${hiddenFieldIds.size}` : ''}`}
             aria-expanded={openPanel === 'field'}
             aria-controls="query-popover-field"
             disabled={!ready}

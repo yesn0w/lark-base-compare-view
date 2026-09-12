@@ -80,7 +80,7 @@ npm run check:opdev
   navigation, and a filename fallback when a preview cannot load.
 - Switch Feishu between light and dark appearance and confirm the view updates
   without a reload.
-- Change a Base record or field and confirm the extension refreshes.
+- Simulate a record or field change locally and confirm the extension refreshes.
 - Check five horizontal record columns and a table containing roughly 100
   records for usable scrolling and selector behavior.
 
@@ -117,3 +117,18 @@ This repository is prepared for local debugging and PR review only. Run
 `npm run upload` and publish the Feishu app only after verifying requested
 permissions, local host behavior, and the current app-release process in the
 Feishu developer console.
+
+## Field controls verification
+
+`npm test` includes `check:field-config` and `check:field-display`: legacy/default
+configuration, cleanup and round-trips, draft isolation, hidden-field ordering,
+all render kinds, temporary expansion, and unchanged load keys. Use the configured
+real Feishu page for handle dragging, edge scrolling, keyboard ordering, save and
+discard, hidden/show restoration, long text layout, and full-page reload. Capture
+and restore the original shared configuration. Never create or edit business
+records for validation; simulate metadata changes and save failures locally.
+
+Also inspect light/dark and mobile read-only layouts, immediate row expansion,
+and retained expansion across filters and unrelated saves. Record physical-device
+coverage separately. Use existing records and fixtures for 100/500-record checks;
+no fixed rendering latency or virtual scrolling is promised.
