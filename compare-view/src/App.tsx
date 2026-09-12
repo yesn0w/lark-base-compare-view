@@ -24,6 +24,7 @@ import {
   groupRecords,
   sortRecords,
 } from './utils/queryEngine';
+import { orderFields } from './utils/fieldDisplay';
 import { DEFAULT_ROW_HEIGHT, type RowHeight } from './utils/rowHeight';
 
 function toggleGroupKey(
@@ -117,7 +118,7 @@ export const App = () => {
   const visibleFields = useMemo(
     () =>
       context && applied
-        ? context.fields.filter((field) => !applied.hiddenFieldIds.includes(field.id))
+        ? orderFields(context.fields, applied.fieldOrderIds).filter((field) => !applied.hiddenFieldIds.includes(field.id))
         : [],
     [applied, context]
   );
@@ -210,7 +211,7 @@ export const App = () => {
 
   // A loaded configuration can always be inspected; only editing needs permission.
   const configReady = config.status === 'ready' && Boolean(draft);
-  const controlsDisabled = !configReady || !config.canSave;
+  const controlsDisabled = !configReady || !config.canSave || config.saving;
   const selectedCandidateIdSet = new Set(candidateRecordIds);
   const hiddenSelectedCount = draft
     ? draft.selectedRecordIds.filter((recordId) => !selectedCandidateIdSet.has(recordId)).length
@@ -384,6 +385,13 @@ export const App = () => {
       <QueryToolbar
         locale={locale}
         fields={context.fields}
+        orderedFields={orderFields(context.fields, draft?.fieldOrderIds ?? [])}
+        wrappedFieldIds={new Set(draft?.wrappedFieldIds ?? [])}
+        onFieldOrderChange={(fieldOrderIds) => config.updateDraft((current) => ({ ...current, fieldOrderIds }))}
+        onResetFieldOrder={() => config.updateDraft((current) => ({ ...current, fieldOrderIds: [] }))}
+        onToggleFieldWrap={(id) => config.updateDraft((current) => ({
+          ...current, wrappedFieldIds: [...toggleId(new Set(current.wrappedFieldIds), id)],
+        }))}
         filters={draft?.filters ?? { conjunction: 'and', rules: [] }}
         sortRules={draft?.sortRules ?? []}
         groupFieldId={draft?.groupFieldId ?? null}

@@ -1451,3 +1451,17 @@ select:disabled {
     grid-row: 1 / 3;
   }
 }
+
+/* Field controls keep visibility and wrapping independent of the drag handle. */
+.field-selector-list { position: relative; }
+.field-selector__item { position: relative; gap: 8px; }
+.field-selector__label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.field-selector__label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.field-selector__wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.field-selector__item--before::before, .field-selector__item--after::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 2px; background: var(--accent-solid); pointer-events: none;
+}
+.field-selector__item--before::before { top: 0; }
+.field-selector__item--after::after { bottom: 0; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

@@ -76,6 +76,8 @@ export interface CompareViewConfig {
   viewId: string | null;
   selectedRecordIds: string[];
   hiddenFieldIds: string[];
+  fieldOrderIds: string[];
+  wrappedFieldIds: string[];
   filters: {
     conjunction: FilterConjunction;
     rules: CompareFilterRule[];
