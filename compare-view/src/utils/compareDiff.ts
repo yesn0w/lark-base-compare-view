@@ -21,6 +21,11 @@ export function readCellValue(
   );
 }
 
+/** Missing values are still loading, not empty business cells. */
+export function isFieldLoaded(values: CellValueMap, fieldId: string, recordIds: string[]): boolean {
+  return recordIds.every((recordId) => Boolean(values[makeCellKey(fieldId, recordId)]));
+}
+
 /**
  * A field counts as differing when the compared records do not all share the
  * same displayed value. A single record can never differ from itself.
@@ -30,7 +35,7 @@ export function fieldHasDifference(
   fieldId: string,
   recordIds: string[]
 ): boolean {
-  if (recordIds.length < 2) {
+  if (recordIds.length < 2 || !isFieldLoaded(values, fieldId, recordIds)) {
     return false;
   }
 

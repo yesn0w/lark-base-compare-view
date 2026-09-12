@@ -30,8 +30,19 @@ unsaved local drafts are retained and report a remote change.
 `useFieldValues` loads raw field values lazily for query controls.
 `queryEngine` is pure: it normalizes values, filters, stably sorts, and places a
 record in at most one group. `deriveCandidateRecords` derives candidate order
-from query rules without depending on selected-record or comparison-column order. `useCellValues` loads structured matrix values containing stable
-display text plus in-memory attachment presentation metadata.
+from query rules without depending on selected-record or comparison-column order.
+`useCellValues` loads structured matrix values containing stable
+display text plus in-memory attachment presentation metadata. `cellLoading`
+generates at most 12 cell-read tasks per batch and publishes each completed
+batch. A failed cell falls back to an empty display value without discarding
+other cells. Cancellation stops subsequent batches and ignores old results;
+already-issued SDK calls may briefly overlap a new load. Field/record membership,
+not order, identifies a request, so column reordering does not refetch cells.
+Loaded values for retained cells are reused within the same adapter; a new
+adapter clears old-source values, and removed cells leave the cache.
+
+The version-1 schema and scoped bridge key remain unchanged. Selected IDs are
+validated and deduplicated without a count limit or truncation.
 
 The host theme and language are presentational state. Language and collapse
 state never enter the bridge payload.
@@ -81,7 +92,9 @@ presentational. None of these components recreates a Feishu native editor.
 
 `compareDiff` is pure. It compares only the stable formatted display text
 already loaded by `useCellValues`, never temporary thumbnail URLs, so difference
-marking needs no extra SDK call. `App` derives
+marking needs no extra SDK call. Incomplete fields do not count as differences
+and remain visible with loading placeholders even when differences-only is active;
+they are filtered only when all requested cell values have arrived. `App` derives
 the differing-field set once and reuses it for the status bar count, the row
 markers, and the differences-only filter.
 

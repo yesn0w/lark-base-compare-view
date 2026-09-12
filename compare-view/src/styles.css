@@ -1157,6 +1157,10 @@ select:disabled {
   white-space: nowrap;
 }
 
+.cell-text--loading {
+  color: var(--subtle);
+}
+
 .cell-text--diff {
   font-weight: 600;
 }

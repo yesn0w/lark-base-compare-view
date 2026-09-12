@@ -1,5 +1,4 @@
 export const MIN_COMPARE_RECORDS = 1;
-export const MAX_COMPARE_RECORDS = 10;
 
 /**
  * Reorders a selected record directly against another selected record, which is

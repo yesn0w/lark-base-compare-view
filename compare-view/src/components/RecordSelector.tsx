@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { translate } from '../i18n';
 import type { CompareRecord, CompareRecordGroup, UiLocale } from '../types/compare';
-import { MAX_COMPARE_RECORDS } from '../utils/compareState';
 
 interface RecordSelectorProps {
   locale: UiLocale;
@@ -49,14 +48,13 @@ export function RecordSelector({
 
   const renderRecord = (record: CompareRecord) => {
     const selected = selectedSet.has(record.id);
-    const limitReached = !selected && selectedRecordIds.length >= MAX_COMPARE_RECORDS;
     return (
       <div className={`record-option${selected ? ' record-option--selected' : ''}`} key={record.id}>
         <label className="record-option__choice">
           <input
             type="checkbox"
             checked={selected}
-            disabled={disabled || limitReached}
+            disabled={disabled}
             onChange={() => onToggle(record.id)}
           />
           <span title={record.title}>{record.title}</span>
@@ -86,7 +84,6 @@ export function RecordSelector({
         <span>
           {t('selectedCount', {
             count: selectedRecordIds.length,
-            limit: MAX_COMPARE_RECORDS,
           })}
         </span>
         <button
@@ -140,7 +137,7 @@ export function RecordSelector({
       </div>
 
       <p className="record-picker__hint">
-        {t('recordsPopoverHint', { limit: MAX_COMPARE_RECORDS })}
+        {t('recordsPopoverHint')}
       </p>
     </div>
   );

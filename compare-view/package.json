@@ -11,9 +11,11 @@
     "dev": "npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=development webpack-dev-server --mode development --config ./config/webpack.config.js",
     "start": "npm run dev",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && npm run check:mobile-config && npm run check:record-selection && npm run check:attachments && npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
-    "test": "npm run check:mobile-config && npm run check:record-selection",
-    "upload": "npm run build && opdev upload ./dist"
+    "build": "npm run typecheck && npm test && npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
+    "test": "npm run check:mobile-config && npm run check:record-selection && npm run check:record-count && npm run check:cell-loading && npm run check:attachments",
+    "upload": "npm run build && opdev upload ./dist",
+    "check:record-count": "node ./scripts/run-check.cjs record-count",
+    "check:cell-loading": "node ./scripts/run-check.cjs cell-loading"
   },
   "dependencies": {
     "@lark-opdev/block-bitable-api": "0.4.0",
