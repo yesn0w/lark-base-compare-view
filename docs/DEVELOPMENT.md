@@ -50,13 +50,14 @@ npm run check:opdev
 - Confirm the active table loads, with current-view records first and remaining
   table records after them.
 - Select one record, confirm the matrix does not change, click Save, and then
-  confirm its column appears. Repeat with 2–10 records.
-- Confirm there is one unified candidate list only: a selected row has a dot
-  drag handle before its checkbox, and dragging it changes the selected order.
+  confirm its column appears. Repeat with 11, 25, and 100 records; save and refresh to verify no IDs are lost.
+- Confirm the unified candidate list has no drag handles. With candidates A,
+  B, C, select C then A: candidates must remain A, B, C, while saved columns
+  appear as C, A. Uncheck and reselect C to append it after A.
 - Add and remove text, choice, number, date, and checkbox filters. Confirm they
   affect only candidate rows, while saved filtered-out records stay in matrix.
 - Add multi-rule sorting, confirm changing it resets selected order, then drag
-  a selected row to make a manual adjustment.
+  a comparison column header to make a manual adjustment.
 - Group by a choice and a multi-value field; confirm each record appears in one
   group only, and test local candidate/matrix group collapse.
 - Hide and restore fields, including the primary field. Confirm all result
@@ -82,6 +83,20 @@ npm run check:opdev
 - Change a Base record or field and confirm the extension refreshes.
 - Check five horizontal record columns and a table containing roughly 100
   records for usable scrolling and selector behavior.
+
+## Batch-loading regression checks
+
+Run `npm test` for selection ordering, unlimited version-1 config round-trips,
+mobile access, attachment rendering, and deterministic batch/cancellation checks.
+`npm run check:cell-loading` also reads 500 records × 20 fields with a mock reader
+and reports task count, peak concurrency, batch count, and elapsed time. This
+measures the loader only, not Feishu latency or browser rendering performance.
+
+In the host or a local mock UI, check loading placeholders and differences-only
+while reads are pending, save failure and Discard, source switching during a
+load, and header reordering without refetching cells. Test light/dark appearance,
+100-column horizontal scrolling, and mobile view-only access. Use existing or
+mock data only. No virtual scrolling or fixed response-time guarantee is added.
 
 ## Pull request workflow
 

@@ -18,9 +18,10 @@ and these staged comparison controls:
 
 - Reach every control from one compact toolbar: records, fields, filter, group,
   sort, row height, and the save actions.
-- Select 1–10 records from one candidate list in the records popover. A selected
-  row has a native-like drag handle before its checkbox; drag it to change its
-  display order.
+- Select one or more records without a plugin-defined count limit from one
+  candidate list in the records popover. Checking
+  records keeps candidate order stable and appends comparison columns in selection
+  order. Drag comparison headers to reorder columns, then save to apply.
 - Filter, sort, group, and choose visible fields locally in the extension. They
   never alter the native table view.
 - See how many fields differ across the compared records, mark those rows, and

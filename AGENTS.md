@@ -30,8 +30,11 @@ changing underlying Base business data.
   collapsed groups.
 - Keep staged changes as a draft. The comparison matrix must use only the last
   successfully saved configuration.
-- Support 1–10 selected records, local filter/group/sort controls, horizontal
-  scrolling, field visibility, and manual selected-record ordering.
+- Support one or more selected records without a plugin-defined count limit,
+  local filter/group/sort controls, horizontal scrolling, field visibility, and
+  manual comparison-column ordering. Selection must not reorder candidates.
+- Load comparison cells in batches of at most 12 tasks per load. Do not persist
+  cell values or silently truncate selected IDs.
 - Follow the current Feishu light/dark appearance without storing a separate
   theme preference.
 - Do not add a backend, database, login flow, automation, or state-management

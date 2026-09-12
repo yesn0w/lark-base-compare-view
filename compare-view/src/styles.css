@@ -831,7 +831,7 @@ select:disabled {
   border-radius: 6px;
   display: grid;
   gap: 4px;
-  grid-template-columns: 22px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   height: 30px;
   padding: 0 4px;
 }
@@ -839,10 +839,6 @@ select:disabled {
 .record-option:hover,
 .record-option--selected {
   background: var(--hover);
-}
-
-.record-option--drop-target {
-  box-shadow: inset 0 2px 0 var(--accent);
 }
 
 .record-option__choice {
@@ -1159,6 +1155,10 @@ select:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cell-text--loading {
+  color: var(--subtle);
 }
 
 .cell-text--diff {

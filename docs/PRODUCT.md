@@ -17,10 +17,12 @@ Compare View renders fields vertically and saved records horizontally.
   reorder fields in Compare View.
 - All controls live on one toolbar: records, fields, filter, group, sort, and
   row height, with save state and the save actions at its trailing end.
-- Select 1–10 records in a single candidate list inside the **Records**
-  popover, which also offers a search box and a clear action. Each selected row
-  has a drag handle before its checkbox. Dragging changes saved comparison
-  order; a separate selected-record list is intentionally not shown.
+- Select one or more records without a plugin-defined count limit in a single
+  candidate list inside the **Records**
+  popover, which also offers a search box and a clear action. Checking or
+  unchecking never reorders candidates. New selections append to the comparison
+  order; deselecting and reselecting appends again. Only comparison headers
+  support manual dragging, and changes apply after saving.
 - A status bar under the toolbar reports compared records, visible fields, and
   how many fields differ, and offers a **Differences only** filter that hides
   fields whose compared values are identical.
@@ -51,6 +53,10 @@ Compare View renders fields vertically and saved records horizontally.
 - Grouping puts a record in its first normalized value only, so a multi-value
   field never duplicates a comparison column. Candidate and matrix group
   sections can be collapsed locally; collapse state is not saved.
+- Cells load progressively in batches of at most 12. Pending cells show
+  `Loading…`, and incomplete fields do not count as differences or get hidden by
+  **Differences only** until loading finishes. A failed read keeps the existing
+  empty-value fallback without clearing other cells.
 - Empty values render as `—`. The matrix uses SDK-formatted display text when
   possible and safely degrades for complex cells.
 
@@ -66,7 +72,11 @@ bridge data store. Base edit users may save; read-only users can load the last
 saved configuration. The Feishu mobile app also loads that saved configuration
 but keeps every result-affecting control read-only; creation and editing happen
 on the web or desktop client. Concurrent saves use last-successful-write
-behavior.
+behavior. An empty selection can be saved and shows the selection guide.
+Version-1 saved configurations remain compatible without migration. The plugin
+does not impose a record count limit; if the host rejects a save, the draft and
+last successful comparison are retained. Older plugin versions still truncate
+selections when reading, so use the updated version in every validation tab.
 
 Chinese/English choice, Feishu appearance, collapsed groups, row height, the
 differences-only filter, and the field-column width remain local to the current

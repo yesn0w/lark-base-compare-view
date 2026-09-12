@@ -1,7 +1,6 @@
-import { useMemo, useState, type DragEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { translate } from '../i18n';
 import type { CompareRecord, CompareRecordGroup, UiLocale } from '../types/compare';
-import { MAX_COMPARE_RECORDS } from '../utils/compareState';
 
 interface RecordSelectorProps {
   locale: UiLocale;
@@ -11,22 +10,8 @@ interface RecordSelectorProps {
   collapsedGroupKeys: Set<string>;
   disabled?: boolean;
   onToggle: (recordId: string) => void;
-  onMoveBefore: (recordId: string, targetRecordId: string) => void;
   onToggleGroup: (groupKey: string) => void;
   onClearSelection: () => void;
-}
-
-function DragGrip() {
-  return (
-    <svg viewBox="0 0 12 18" aria-hidden="true" focusable="false">
-      <circle cx="3" cy="3" r="1.25" />
-      <circle cx="9" cy="3" r="1.25" />
-      <circle cx="3" cy="9" r="1.25" />
-      <circle cx="9" cy="9" r="1.25" />
-      <circle cx="3" cy="15" r="1.25" />
-      <circle cx="9" cy="15" r="1.25" />
-    </svg>
-  );
 }
 
 export function RecordSelector({
@@ -37,15 +22,12 @@ export function RecordSelector({
   collapsedGroupKeys,
   disabled = false,
   onToggle,
-  onMoveBefore,
   onToggleGroup,
   onClearSelection,
 }: RecordSelectorProps) {
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
     translate(locale, key, values);
   const [query, setQuery] = useState('');
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const selectedSet = new Set(selectedRecordIds);
   const hasGroups = groups.some((group) => Boolean(group.label));
   const search = query.trim().toLowerCase();
@@ -64,72 +46,15 @@ export function RecordSelector({
   }, [groups, search]);
   const hasResults = visibleGroups.some((group) => group.records.length);
 
-  const startDrag = (event: DragEvent<HTMLButtonElement>, recordId: string) => {
-    if (!selectedSet.has(recordId) || disabled) {
-      event.preventDefault();
-      return;
-    }
-
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', recordId);
-    setDraggingId(recordId);
-  };
-
-  const finishDrag = () => {
-    setDraggingId(null);
-    setDropTargetId(null);
-  };
-
   const renderRecord = (record: CompareRecord) => {
     const selected = selectedSet.has(record.id);
-    const limitReached = !selected && selectedRecordIds.length >= MAX_COMPARE_RECORDS;
-    const isDropTarget =
-      draggingId !== null && draggingId !== record.id && dropTargetId === record.id;
-
     return (
-      <div
-        className={`record-option${selected ? ' record-option--selected' : ''}${
-          isDropTarget ? ' record-option--drop-target' : ''
-        }`}
-        key={record.id}
-        onDragOver={(event) => {
-          if (!draggingId || draggingId === record.id) {
-            return;
-          }
-          event.preventDefault();
-          event.dataTransfer.dropEffect = 'move';
-          setDropTargetId(record.id);
-        }}
-        onDragLeave={() => {
-          if (dropTargetId === record.id) {
-            setDropTargetId(null);
-          }
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          if (draggingId && draggingId !== record.id) {
-            onMoveBefore(draggingId, record.id);
-          }
-          finishDrag();
-        }}
-      >
-        <button
-          type="button"
-          className="drag-handle"
-          draggable={selected && !disabled}
-          disabled={!selected || disabled}
-          aria-label={`${t('dragRecord')}: ${record.title}`}
-          title={t('dragRecord')}
-          onDragStart={(event) => startDrag(event, record.id)}
-          onDragEnd={finishDrag}
-        >
-          <DragGrip />
-        </button>
+      <div className={`record-option${selected ? ' record-option--selected' : ''}`} key={record.id}>
         <label className="record-option__choice">
           <input
             type="checkbox"
             checked={selected}
-            disabled={disabled || limitReached}
+            disabled={disabled}
             onChange={() => onToggle(record.id)}
           />
           <span title={record.title}>{record.title}</span>
@@ -159,7 +84,6 @@ export function RecordSelector({
         <span>
           {t('selectedCount', {
             count: selectedRecordIds.length,
-            limit: MAX_COMPARE_RECORDS,
           })}
         </span>
         <button
@@ -213,7 +137,7 @@ export function RecordSelector({
       </div>
 
       <p className="record-picker__hint">
-        {t('recordsPopoverHint', { limit: MAX_COMPARE_RECORDS })}
+        {t('recordsPopoverHint')}
       </p>
     </div>
   );

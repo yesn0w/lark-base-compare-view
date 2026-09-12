@@ -6,7 +6,6 @@ import type {
   FilterConjunction,
   FilterOperator,
 } from '../types/compare';
-import { MAX_COMPARE_RECORDS } from './compareState';
 
 const CONFIG_KEY = 'compareViewConfig';
 const FILTER_OPERATORS: FilterOperator[] = [
@@ -127,10 +126,7 @@ export function readCompareConfig(
   const fieldIds = new Set(context.fields.map((field) => field.id));
   const recordIds = new Set(context.records.map((record) => record.id));
   const selectedRecordIds = isStringArray(value.selectedRecordIds)
-    ? unique(value.selectedRecordIds.filter((id) => recordIds.has(id))).slice(
-        0,
-        MAX_COMPARE_RECORDS
-      )
+    ? unique(value.selectedRecordIds.filter((id) => recordIds.has(id)))
     : [];
   const hiddenFieldIds = isStringArray(value.hiddenFieldIds)
     ? unique(value.hiddenFieldIds.filter((id) => fieldIds.has(id)))

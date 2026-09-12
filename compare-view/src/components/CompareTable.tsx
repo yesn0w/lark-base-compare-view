@@ -8,7 +8,7 @@ import type {
   CompareRecordGroup,
   UiLocale,
 } from '../types/compare';
-import { EMPTY_CELL_VALUE } from '../utils/cellFormatting';
+import { EMPTY_CELL_VALUE, makeCellKey } from '../utils/cellFormatting';
 import { isLongCellValue, readCellValue } from '../utils/compareDiff';
 import type { RowHeight } from '../utils/rowHeight';
 import {
@@ -239,7 +239,7 @@ export function CompareTable({
   if (!fields.length) {
     return (
       <section className="compare-table-section" aria-label={t('appTitle')}>
-        <p className="table-status">{t('noDifferences')}</p>
+        <p className="table-status">{t(loading ? 'tableLoading' : 'noDifferences')}</p>
       </section>
     );
   }
@@ -442,6 +442,7 @@ export function CompareTable({
                   </th>
                   {records.map((record) => {
                     const value = readCellValue(values, field.id, record.id);
+                    const pendingValue = loading && !values[makeCellKey(field.id, record.id)];
                     const isTag = field.kind === 'select' && value.text !== EMPTY_CELL_VALUE;
                     const hasAttachments =
                       field.kind === 'attachment' && value.attachments.length > 0;
@@ -452,10 +453,12 @@ export function CompareTable({
                           pendingRecordIds.has(record.id) ? 'compare-table__cell--pending' : undefined
                         }
                         key={record.id}
-                        title={value.text}
+                        title={pendingValue ? t('cellLoading') : value.text}
                       >
                         <div className="compare-table__cell">
-                          {hasAttachments ? (
+                          {pendingValue ? (
+                            <span className="cell-text cell-text--loading">{t('cellLoading')}</span>
+                          ) : hasAttachments ? (
                             <AttachmentCell
                               locale={locale}
                               value={value}
@@ -475,7 +478,7 @@ export function CompareTable({
                               {value.text}
                             </span>
                           )}
-                          {isLongCellValue(value.text) ? (
+                          {!pendingValue && isLongCellValue(value.text) ? (
                             <button
                               type="button"
                               className="link-button cell-expand"

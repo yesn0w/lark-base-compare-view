@@ -4,15 +4,18 @@
   "private": true,
   "scripts": {
     "check:opdev": "node ./scripts/check-opdev-tooling.cjs",
+    "check:record-selection": "node ./scripts/run-check.cjs record-selection",
     "check:attachments": "node ./scripts/check-attachments.cjs",
     "check:mobile-config": "node ./scripts/check-mobile-config.cjs",
     "check:webpackbar": "node ./scripts/check-webpackbar.cjs",
     "dev": "npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=development webpack-dev-server --mode development --config ./config/webpack.config.js",
     "start": "npm run dev",
     "typecheck": "tsc --noEmit",
-    "build": "npm run typecheck && npm run check:mobile-config && npm run check:attachments && npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
-    "test": "npm run check:mobile-config",
-    "upload": "npm run build && opdev upload ./dist"
+    "build": "npm run typecheck && npm test && npm run check:opdev && npm run check:webpackbar && cross-env NODE_ENV=production webpack --mode production --config ./config/webpack.config.js",
+    "test": "npm run check:mobile-config && npm run check:record-selection && npm run check:record-count && npm run check:cell-loading && npm run check:attachments",
+    "upload": "npm run build && opdev upload ./dist",
+    "check:record-count": "node ./scripts/run-check.cjs record-count",
+    "check:cell-loading": "node ./scripts/run-check.cjs cell-loading"
   },
   "dependencies": {
     "@lark-opdev/block-bitable-api": "0.4.0",

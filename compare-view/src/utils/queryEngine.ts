@@ -6,6 +6,7 @@ import type {
   CompareRecord,
   CompareRecordGroup,
   CompareSortRule,
+  CompareViewConfig,
   FieldValueMap,
   FilterOperator,
 } from '../types/compare';
@@ -350,25 +351,22 @@ export function sortRecords(
   return withIndex.map(({ record }) => record);
 }
 
-export function mergeSelectedOrderIntoCandidates(
-  candidates: CompareRecord[],
-  selectedRecordIds: string[]
+/** Candidate order depends on the query, never on selection or column order. */
+export function deriveCandidateRecords(
+  context: CompareContext,
+  query: Pick<CompareViewConfig, 'filters' | 'sortRules'>,
+  valuesByField: Record<string, FieldValueMap>,
+  locale: string,
+  queryValuesReady: boolean
 ): CompareRecord[] {
-  const selectedSet = new Set(selectedRecordIds);
-  const candidateIds = new Set(candidates.map((record) => record.id));
-  const orderedSelected = selectedRecordIds.filter((id) => candidateIds.has(id));
-  const recordsById = new Map(candidates.map((record) => [record.id, record]));
-  let selectedIndex = 0;
+  if (!queryValuesReady) {
+    return context.records;
+  }
 
-  return candidates.map((record) => {
-    if (!selectedSet.has(record.id)) {
-      return record;
-    }
-
-    const replacement = recordsById.get(orderedSelected[selectedIndex]);
-    selectedIndex += 1;
-    return replacement ?? record;
-  });
+  const filtered = filterRecords(
+    context.records, context, query.filters.rules, query.filters.conjunction, valuesByField
+  );
+  return sortRecords(filtered, context.fields, query.sortRules, valuesByField, locale);
 }
 
 export function groupRecords(

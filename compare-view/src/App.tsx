@@ -12,19 +12,16 @@ import { useFeishuTheme } from './hooks/useFeishuTheme';
 import { useFieldValues } from './hooks/useFieldValues';
 import { getInitialLocale, translate } from './i18n';
 import type { CompareRecord, CompareViewConfig, UiLocale } from './types/compare';
-import { fieldHasDifference } from './utils/compareDiff';
+import { fieldHasDifference, isFieldLoaded } from './utils/compareDiff';
 import {
-  MAX_COMPARE_RECORDS,
   MIN_COMPARE_RECORDS,
   moveSelectedRecordBefore,
-  moveSelectedRecordToCandidatePosition,
   orderSelectedRecordIdsByRecords,
   toggleId,
 } from './utils/compareState';
 import {
-  filterRecords,
+  deriveCandidateRecords,
   groupRecords,
-  mergeSelectedOrderIntoCandidates,
   sortRecords,
 } from './utils/queryEngine';
 import { DEFAULT_ROW_HEIGHT, type RowHeight } from './utils/rowHeight';
@@ -86,19 +83,7 @@ export const App = () => {
       return [];
     }
 
-    const filtered = queryValuesReady
-      ? filterRecords(
-          context.records,
-          context,
-          draft.filters.rules,
-          draft.filters.conjunction,
-          fieldValues.values
-        )
-      : context.records;
-    const sorted = queryValuesReady
-      ? sortRecords(filtered, context.fields, draft.sortRules, fieldValues.values, locale)
-      : filtered;
-    return mergeSelectedOrderIntoCandidates(sorted, draft.selectedRecordIds);
+    return deriveCandidateRecords(context, draft, fieldValues.values, locale, queryValuesReady);
   }, [context, draft, fieldValues.values, locale, queryValuesReady]);
   const candidateGroups = useMemo(
     () =>
@@ -150,8 +135,13 @@ export const App = () => {
     [cellValues.values, selectedIds, visibleFields]
   );
   const displayFields = useMemo(
-    () => (diffOnly ? visibleFields.filter((field) => differingFieldIds.has(field.id)) : visibleFields),
-    [diffOnly, differingFieldIds, visibleFields]
+    () =>
+      diffOnly
+        ? visibleFields.filter((field) =>
+            !isFieldLoaded(cellValues.values, field.id, selectedIds) || differingFieldIds.has(field.id)
+          )
+        : visibleFields,
+    [cellValues.values, diffOnly, differingFieldIds, selectedIds, visibleFields]
   );
   const pendingRecordIds = useMemo(() => {
     if (!draft) {
@@ -193,10 +183,6 @@ export const App = () => {
           ...current,
           selectedRecordIds: current.selectedRecordIds.filter((id) => id !== recordId),
         };
-      }
-
-      if (current.selectedRecordIds.length >= MAX_COMPARE_RECORDS) {
-        return current;
       }
 
       return { ...current, selectedRecordIds: [...current.selectedRecordIds, recordId] };
@@ -269,7 +255,7 @@ export const App = () => {
   ) : appliedRecords.length < MIN_COMPARE_RECORDS ? (
     <EmptyState
       title={t('emptySelectionTitle')}
-      description={t('emptySelectionDescription', { limit: MAX_COMPARE_RECORDS })}
+      description={t('emptySelectionDescription')}
       action={
         <button
           type="button"
@@ -420,17 +406,6 @@ export const App = () => {
             onToggle={toggleRecord}
             onClearSelection={() =>
               config.updateDraft((current) => ({ ...current, selectedRecordIds: [] }))
-            }
-            onMoveBefore={(recordId, targetRecordId) =>
-              config.updateDraft((current) => ({
-                ...current,
-                selectedRecordIds: moveSelectedRecordToCandidatePosition(
-                  current.selectedRecordIds,
-                  candidateRecordIds,
-                  recordId,
-                  targetRecordId
-                ),
-              }))
             }
             onToggleGroup={(groupKey) =>
               setCandidateCollapsedGroups((current) => toggleGroupKey(current, groupKey))
