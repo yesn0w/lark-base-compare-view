@@ -31,19 +31,25 @@ Compare View renders fields vertically and saved records horizontally.
 - Row height offers four minimum heights. Each field can wrap independently,
   including labels, tags, and attachment filenames. Wrapping preserves newlines
   and breaks long strings within the existing column width; rows grow to fit.
-  Image sizes, arrangement, and preview remain unchanged.
+  Attachment filename wrapping is independent of the fixed image area.
 - Non-attachment text longer than 36 characters or containing a newline offers
   Expand when its row is not wrapped. It immediately expands the entire row;
   Collapse beside the field name restores the saved wrapping setting. Multiple
   rows may expand, including on read-only/mobile hosts.
-- An attachment cell shows every image thumbnail directly. Clicking any image
-  opens a read-only gallery with keyboard navigation; record columns widen and
-  use the matrix's horizontal scroll when needed, while non-image files and
-  unavailable previews remain readable by filename.
+- An attachment cell shows its current image, fully contained in a 240px-high
+  area independent of row height. Previous/Next controls retain source order,
+  disable at the ends and synchronize with the read-only preview. Missing or
+  failed images keep their position and filename; other files appear below.
+  Only the current image mounts, with lazy loading; no gallery preloading.
 - A record column header can be reordered by dragging or dropped from the
   comparison with its close action. Both edit the draft, so the column stays
   visible, marked as pending, until the change is saved.
-- The field column can be resized by dragging or with the arrow keys.
+- All columns resize independently: field default 200px (140–420px), record
+  default 220px (160–800px). Record IDs retain widths across sorting, grouping
+  and deselection. The table uses the exact sum of widths and scrolls horizontally.
+  Drag to preview and release to share; Escape/cancel restores the gesture.
+  Arrow keys change 16px and share after 300ms idle or blur. Double-click or
+  Home restores that column's default. Read-only/mobile hosts cannot resize.
 - Default visibility contains all non-primary fields. The SDK-identified
   primary field becomes the record-column title and may be shown as a normal
   matrix row.
@@ -67,12 +73,12 @@ Compare View renders fields vertically and saved records horizontally.
 
 ## Save and sharing
 
-Shared comparison controls are drafts. **Save** applies those settings to
+Record, query, and field controls are drafts. **Save** applies those settings to
 the comparison matrix; **Discard** restores the last saved
 configuration and **Reset** prepares default values for a later save.
 
 Saved configuration contains selected record IDs, hidden field IDs, filter
-rules, sort rules, the group field, field order, and wrapped field IDs. It is shared through Feishu’s official
+rules, sort rules, the group field, field order, wrapped field IDs, and column widths. It is shared through Feishu’s official
 bridge data store. Base edit users may save; read-only users can load the last
 saved configuration. The Feishu mobile app also loads that saved configuration
 but keeps every result-affecting control read-only; creation and editing happen
@@ -84,8 +90,8 @@ last successful comparison are retained. Older plugin versions still truncate
 selections when reading, so use the updated version in every validation tab.
 
 Chinese/English choice, Feishu appearance, collapsed groups, row height, the
-differences-only filter, and the field-column width and temporary row expansion remain local to the current
-session.
+differences-only filter, temporary row expansion, and attachment image positions
+remain local to the current session.
 
 Attachment thumbnail URLs are temporary presentation data. They remain only in
 memory, refresh with Base data, and never enter the saved bridge configuration.
@@ -122,3 +128,25 @@ Temporary expansion survives sorting, grouping, differences-only filtering, and
 unrelated saves. Hiding or deleting a field clears that field's expansion;
 changing source, refreshing data, or reloading clears all temporary expansion.
 Turning saved wrapping off leaves a temporarily expanded row open until Collapse.
+
+## Column widths and image browsing
+
+Column widths are an immediate, automatically shared exception to other drafts.
+Sharing displays a separate status. Failure retains the local layout with Retry
+and Restore shared widths; Discard affects other drafts only. Ordinary Save waits
+for width sharing and stops if it fails. Refresh/source changes prompt when widths
+are pending; a full-page departure uses the browser's unsaved-change warning.
+
+Version 1 adds `fieldColumnWidth: number | null` (default `null`) and
+`recordColumnWidths: Record<string, number>` (default `{}`). Finite values are
+rounded and clamped; malformed values and deleted record IDs are removed. Widths
+for unselected existing records remain. Object key ordering is not a setting.
+Old builds may discard new settings on save; test all tabs with the current build.
+
+Image positions are temporary within the source session. Sorting,
+group collapse, differences-only filtering and unrelated saves preserve them;
+saved hiding/removal, changed attachments, source changes and explicit refresh
+clear the affected positions. Images and URLs never enter shared configuration.
+Resizing and switching images do not change cell load keys or issue extra reads.
+
+Collapsed groups expose an Expand group action above the matrix, including when every group is collapsed. This reading action preserves widths and image positions.

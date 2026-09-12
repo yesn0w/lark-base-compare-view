@@ -25,6 +25,8 @@ import {
   sortRecords,
 } from './utils/queryEngine';
 import { orderFields, retainExpandedFields } from './utils/fieldDisplay';
+import { makeCellKey } from './utils/cellFormatting';
+import { imageIndex, attachmentSignature, retainImagePositions, type ImagePositions } from './utils/attachmentGallery';
 import { DEFAULT_ROW_HEIGHT, type RowHeight } from './utils/rowHeight';
 
 function toggleGroupKey(
@@ -46,6 +48,7 @@ export const App = () => {
   // They are deliberately not part of the persisted compare configuration.
   const [rowHeight, setRowHeight] = useState<RowHeight>(DEFAULT_ROW_HEIGHT);
   const [diffOnly, setDiffOnly] = useState(false);
+  const [imagePositions, setImagePositions] = useState<ImagePositions>({});
   const [expandedFieldIds, setExpandedFieldIds] = useState<Set<string>>(new Set());
   const [openPanel, setOpenPanel] = useState<QueryPanel>(null);
   const sortResetKeyRef = useRef<string | null>(null);
@@ -137,18 +140,30 @@ export const App = () => {
     [applied, context]
   );
   useEffect(() => {
-    setExpandedFieldIds(new Set());
+    setExpandedFieldIds(new Set()); setImagePositions({});
   }, [context?.tableId, context?.viewId]);
   useEffect(() => {
     setExpandedFieldIds((current) => retainExpandedFields(current, visibleFields.map((field) => field.id)));
   }, [visibleFields]);
   const refreshData = (force = false) => {
     if (!force && !reloadGuard.current()) return;
-    setExpandedFieldIds(new Set()); setPendingReload(false); reload(true);
+    setExpandedFieldIds(new Set()); setImagePositions({}); setPendingReload(false); reload(true);
     void config.reloadSharedConfig();
   };
   const selectedIds = useMemo(() => appliedRecords.map((record) => record.id), [appliedRecords]);
   const cellValues = useCellValues(adapter, visibleFields, selectedIds);
+  useEffect(() => {
+    setImagePositions(current => retainImagePositions(current, visibleFields.map(field => field.id), selectedIds, cellValues.values));
+  }, [visibleFields, selectedIds, cellValues.values]);
+  const getImageIndex = (fieldId: string, recordId: string) => {
+    const key = makeCellKey(fieldId, recordId);
+    return imageIndex(imagePositions, key, cellValues.values[key]?.attachments ?? []);
+  };
+  const changeImageIndex = (fieldId: string, recordId: string, index: number) => {
+    const key = makeCellKey(fieldId, recordId);
+    const attachments = cellValues.values[key]?.attachments ?? [];
+    setImagePositions(current => ({...current, [key]: {signature: attachmentSignature(attachments), index}}));
+  };
   const currentSortKey = configSortKey(draft);
 
   const differingFieldIds = useMemo(
@@ -299,6 +314,8 @@ export const App = () => {
     <TableSkeleton locale={locale} columnCount={selectedIds.length} />
   ) : (
     <CompareTable
+      getImageIndex={getImageIndex}
+      onImageIndexChange={changeImageIndex}
       widths={config.widths}
       onColumnWidthChange={config.setWidth}
       locale={locale}

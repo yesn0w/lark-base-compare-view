@@ -74,5 +74,10 @@ export async function check() {
     widths={{fieldColumnWidth: 300, recordColumnWidths:{a:400,b:500}}} onColumnWidthChange={() => {}}
     onToggleFieldExpansion={() => {}} onToggleGroup={() => {}} onRemoveRecord={() => {}} onMoveRecordBefore={() => {}} />);
   assert.match(markup, /width:1200px/); assert.equal((markup.match(/role="separator"/g) ?? []).length, 3);
+  const collapsedMarkup = renderToStaticMarkup(<CompareTable locale="en-US" fields={[]}
+    groups={[{key:'g',label:'Group',records:context.records}]} collapsedGroupKeys={new Set(['g'])} differingFieldIds={new Set()} pendingRecordIds={new Set()}
+    values={{}} rowHeight={32} wrappedFieldIds={new Set()} expandedFieldIds={new Set()} loading={false} disabled
+    onToggleFieldExpansion={() => {}} onToggleGroup={() => {}} onRemoveRecord={() => {}} onMoveRecordBefore={() => {}} />);
+  assert.match(collapsedMarkup, /Expand group: Group/); assert.doesNotMatch(collapsedMarkup, /disabled=""/);
   assert.match(markup, /aria-valuenow="400"/); assert.match(markup, /aria-valuemax="800"/);
 }

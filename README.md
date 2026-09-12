@@ -32,11 +32,13 @@ and these staged comparison controls:
 - Switch between four minimum row heights. Expand clipped text inline across
   its field row, then collapse it; this temporary reading action also works
   for read-only users and does not require saving.
-- See every image-attachment thumbnail directly in each cell, click any image
-  to open the full in-extension gallery, and keep non-image files readable by
-  name.
-- Save to apply a draft. Until saving succeeds, the matrix continues to show
-  the last saved configuration.
+- Resize the field column and each record column independently; widths update
+  immediately and share automatically after dragging. Failed shares retain the
+  local width with retry and restore actions. Other controls remain drafts.
+- View one attachment image in a 240px-high area, switch images in the cell or
+  read-only gallery, and keep unavailable images and other files readable by name.
+- Save to apply record and field drafts. Column widths share separately and
+  never submit those drafts.
 - Share saved extension configuration through the official bridge data store.
   This is the only write operation and never writes Base business data.
 - Open an existing Compare View in the Feishu mobile app to inspect the last

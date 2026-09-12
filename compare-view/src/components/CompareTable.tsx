@@ -2,8 +2,6 @@ import { useState, type DragEvent } from 'react';
 import { translate } from '../i18n';
 import type {
   CellValueMap,
-  CompareCellAttachment,
-  CompareCellValue,
   CompareField,
   CompareRecordGroup,
   UiLocale,
@@ -11,16 +9,17 @@ import type {
 import { EMPTY_CELL_VALUE, makeCellKey } from '../utils/cellFormatting';
 import { isLongCellValue, readCellValue } from '../utils/compareDiff';
 import type { RowHeight } from '../utils/rowHeight';
-import {
-  AttachmentPreviewDialog,
-  type PreviewableAttachment,
-} from './AttachmentPreviewDialog';
+import { AttachmentPreviewDialog } from './AttachmentPreviewDialog';
+import { AttachmentCarousel } from './AttachmentCarousel';
+import { imageAttachments } from '../utils/attachmentGallery';
 import { FieldKindIcon } from './FieldKindIcon';
 
 import { ColumnResizer } from './ColumnResizer';
 import { columnWidth, type WidthSettings, type ColumnId } from '../utils/columnWidths';
 
 interface CompareTableProps {
+  getImageIndex?: (fieldId: string, recordId: string) => number;
+  onImageIndexChange?: (fieldId: string, recordId: string, index: number) => void;
   widths?: WidthSettings;
   onColumnWidthChange?: (id: ColumnId, width: number | null) => void;
   locale: UiLocale;
@@ -44,96 +43,12 @@ interface CompareTableProps {
 
 interface AttachmentPreview {
   title: string;
-  images: PreviewableAttachment[];
-  initialIndex: number;
-}
-
-function isPreviewableAttachment(
-  attachment: CompareCellAttachment
-): attachment is PreviewableAttachment {
-  return (
-    attachment.mimeType.toLowerCase().startsWith('image/') &&
-    Boolean(attachment.thumbnailUrl)
-  );
-}
-
-function AttachmentThumbnail({
-  attachment,
-  label,
-  onOpen,
-}: {
-  attachment: PreviewableAttachment;
-  label: string;
-  onOpen: () => void;
-}) {
-  const [failed, setFailed] = useState(false);
-
-  if (failed) {
-    return (
-      <span className="attachment-file-name" title={attachment.name}>
-        {attachment.name}
-      </span>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      className="attachment-thumbnail"
-      aria-label={`${label}: ${attachment.name}`}
-      title={attachment.name}
-      onClick={onOpen}
-    >
-      <img
-        src={attachment.thumbnailUrl}
-        alt={attachment.name}
-        loading="lazy"
-        decoding="async"
-        onError={() => setFailed(true)}
-      />
-    </button>
-  );
-}
-
-function AttachmentCell({
-  locale,
-  value,
-  onPreview,
-}: {
-  locale: UiLocale;
-  value: CompareCellValue;
-  onPreview: (images: PreviewableAttachment[], initialIndex: number) => void;
-}) {
-  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const images = value.attachments.filter(isPreviewableAttachment);
-  const fallbackNames = value.attachments
-    .filter((attachment) => !isPreviewableAttachment(attachment))
-    .map((attachment) => attachment.name);
-
-  return (
-    <div className="attachment-cell">
-      {images.length ? (
-        <div className="attachment-thumbnails">
-          {images.map((attachment, index) => (
-            <AttachmentThumbnail
-              attachment={attachment}
-              label={t('previewAttachment')}
-              onOpen={() => onPreview(images, index)}
-              key={`${index}:${attachment.name}:${attachment.thumbnailUrl}`}
-            />
-          ))}
-        </div>
-      ) : null}
-      {fallbackNames.length ? (
-        <span className="attachment-file-names" title={fallbackNames.join(', ')}>
-          {fallbackNames.join(', ')}
-        </span>
-      ) : null}
-    </div>
-  );
+  fieldId: string;
+  recordId: string;
 }
 
 export function CompareTable({
+  getImageIndex = () => 0, onImageIndexChange = () => {},
   widths = { fieldColumnWidth: null, recordColumnWidths: {} }, onColumnWidthChange,
   locale,
   fields,
@@ -155,11 +70,18 @@ export function CompareTable({
   const widthFor = (id: ColumnId) => widthPreviews.get(id) ?? columnWidth(widths, id);
   const fieldColumnWidth = widthFor(null);
   const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
+  const previewImages = attachmentPreview ? imageAttachments(readCellValue(values, attachmentPreview.fieldId, attachmentPreview.recordId).attachments) : [];
+  const previewVisible = attachmentPreview && fields.some(field => field.id === attachmentPreview.fieldId) && groups.some(group => group.records.some(record => record.id === attachmentPreview.recordId));
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
   const grouped = groups.some((group) => Boolean(group.label));
   const visibleGroups = groups.filter((group) => !collapsedGroupKeys.has(group.key));
+  const collapsedGroups = groups.filter(group => collapsedGroupKeys.has(group.key));
+  const restoreGroups = collapsedGroups.length ? <div className="collapsed-group-actions">
+    {collapsedGroups.map(group => <button type="button" className="text-button" key={group.key}
+      onClick={() => onToggleGroup(group.key)} aria-label={`${t('expandGroup')}: ${group.label}`}>{t('expandGroup')}: {group.label}</button>)}
+  </div> : null;
   const records = visibleGroups.flatMap((group) => group.records);
   const recordColumnWidths = new Map(records.map(record => [record.id, widthFor(record.id)]));
   const resizer = (id: ColumnId, title: string) => <ColumnResizer
@@ -178,6 +100,7 @@ export function CompareTable({
     return (
       <section className="compare-table-section" aria-label={t('appTitle')}>
         <p className="table-status">{t('allGroupsCollapsed')}</p>
+        {restoreGroups}
       </section>
     );
   }
@@ -290,6 +213,7 @@ export function CompareTable({
       aria-label={t('appTitle')}
       style={{ ['--field-column-width' as string]: `${fieldColumnWidth}px` }}
     >
+      {restoreGroups}
       {loading ? <p className="table-status">{t('tableLoading')}</p> : null}
       <div className="compare-table-scroll">
         <table
@@ -395,16 +319,10 @@ export function CompareTable({
                           {pendingValue ? (
                             <span className="cell-text cell-text--loading">{t('cellLoading')}</span>
                           ) : hasAttachments ? (
-                            <AttachmentCell
-                              locale={locale}
-                              value={value}
-                              onPreview={(images, initialIndex) => {
-                                setAttachmentPreview({
-                                  title: field.name,
-                                  images,
-                                  initialIndex,
-                                });
-                              }}
+                            <AttachmentCarousel locale={locale} value={value} label={`${field.name}: ${record.title}`}
+                              index={getImageIndex(field.id, record.id)}
+                              onIndexChange={index => onImageIndexChange(field.id, record.id, index)}
+                              onPreview={() => setAttachmentPreview({ title: `${field.name}: ${record.title}`, fieldId: field.id, recordId: record.id })}
                             />
                           ) : isTag ? (
                             <span className="cell-tag">{value.text}</span>
@@ -435,12 +353,13 @@ export function CompareTable({
         </table>
       </div>
 
-      {attachmentPreview ? (
+      {attachmentPreview && previewVisible && previewImages.length ? (
         <AttachmentPreviewDialog
           locale={locale}
           title={attachmentPreview.title}
-          images={attachmentPreview.images}
-          initialIndex={attachmentPreview.initialIndex}
+          images={previewImages}
+          currentIndex={getImageIndex(attachmentPreview.fieldId, attachmentPreview.recordId)}
+          onIndexChange={index => onImageIndexChange(attachmentPreview.fieldId, attachmentPreview.recordId, index)}
           onClose={() => setAttachmentPreview(null)}
         />
       ) : null}

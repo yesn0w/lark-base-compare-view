@@ -20,6 +20,7 @@ export function ColumnResizer(props: Props) {
   const finish = (commit: boolean) => {
     clearTimeout(timer.current);
     const state = gesture.current;
+    if (!state) return;
     gesture.current = null; setActive(false);
     if (state && commit && state.value !== state.start) latest.current.onCommit(state.value);
     latest.current.onPreview(undefined);

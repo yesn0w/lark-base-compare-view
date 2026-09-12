@@ -2,18 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { translate } from '../i18n';
 import type { CompareCellAttachment, UiLocale } from '../types/compare';
 
-export type PreviewableAttachment = CompareCellAttachment & { thumbnailUrl: string };
-
 interface AttachmentPreviewDialogProps {
   locale: UiLocale;
   title: string;
-  images: PreviewableAttachment[];
-  initialIndex: number;
+  images: CompareCellAttachment[];
+  currentIndex: number;
+  onIndexChange: (index: number) => void;
   onClose: () => void;
-}
-
-function clampIndex(index: number, imageCount: number): number {
-  return Math.min(Math.max(index, 0), Math.max(imageCount - 1, 0));
 }
 
 /** Read-only gallery for attachment thumbnails issued by the Feishu host. */
@@ -21,12 +16,12 @@ export function AttachmentPreviewDialog({
   locale,
   title,
   images,
-  initialIndex,
+  currentIndex,
+  onIndexChange,
   onClose,
 }: AttachmentPreviewDialogProps) {
   const t = (key: Parameters<typeof translate>[1], values?: Record<string, string | number>) =>
     translate(locale, key, values);
-  const [currentIndex, setCurrentIndex] = useState(() => clampIndex(initialIndex, images.length));
   const [imageFailed, setImageFailed] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const currentImage = images[currentIndex];
@@ -34,12 +29,14 @@ export function AttachmentPreviewDialog({
   const canGoNext = currentIndex < images.length - 1;
 
   useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
+    return () => opener?.focus();
   }, []);
 
   useEffect(() => {
     setImageFailed(false);
-  }, [currentImage?.thumbnailUrl]);
+  }, [currentIndex, currentImage?.thumbnailUrl]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -47,16 +44,16 @@ export function AttachmentPreviewDialog({
         onClose();
       } else if (event.key === 'ArrowLeft') {
         event.preventDefault();
-        setCurrentIndex((index) => Math.max(index - 1, 0));
+        onIndexChange(Math.max(currentIndex - 1, 0));
       } else if (event.key === 'ArrowRight') {
         event.preventDefault();
-        setCurrentIndex((index) => Math.min(index + 1, Math.max(images.length - 1, 0)));
+        onIndexChange(Math.min(currentIndex + 1, Math.max(images.length - 1, 0)));
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [images.length, onClose]);
+  }, [images.length, currentIndex, onIndexChange, onClose]);
 
   if (!currentImage) {
     return null;
@@ -89,7 +86,7 @@ export function AttachmentPreviewDialog({
         </div>
 
         <div className="attachment-dialog__body">
-          {imageFailed ? (
+          {imageFailed || !currentImage.thumbnailUrl ? (
             <p className="attachment-dialog__fallback">
               {t('attachmentPreviewUnavailable')}: {currentImage.name}
             </p>
@@ -110,7 +107,7 @@ export function AttachmentPreviewDialog({
             className="secondary-button attachment-dialog__nav"
             disabled={!canGoPrevious}
             aria-label={t('previousImage')}
-            onClick={() => setCurrentIndex((index) => Math.max(index - 1, 0))}
+            onClick={() => onIndexChange(Math.max(currentIndex - 1, 0))}
           >
             {t('previousImage')}
           </button>
@@ -122,7 +119,7 @@ export function AttachmentPreviewDialog({
             className="secondary-button attachment-dialog__nav"
             disabled={!canGoNext}
             aria-label={t('nextImage')}
-            onClick={() => setCurrentIndex((index) => Math.min(index + 1, images.length - 1))}
+            onClick={() => onIndexChange(Math.min(currentIndex + 1, images.length - 1))}
           >
             {t('nextImage')}
           </button>
