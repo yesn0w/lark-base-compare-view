@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BaseAdapter } from '../services/baseAdapter';
 import type { CompareContext } from '../types/compare';
 
@@ -16,11 +16,13 @@ const initialState: CompareContextState = {
   error: null,
 };
 
-export function useCompareContext() {
+export function useCompareContext(beforeReload: () => boolean = () => true) {
+  const guard = useRef(beforeReload); guard.current = beforeReload;
   const [refreshKey, setRefreshKey] = useState(0);
   const [state, setState] = useState<CompareContextState>(initialState);
 
-  const reload = useCallback(() => {
+  const reload = useCallback((force = false) => {
+    if (!force && !guard.current()) return;
     setRefreshKey((current) => current + 1);
   }, []);
 
@@ -38,7 +40,7 @@ export function useCompareContext() {
           return;
         }
 
-        unsubscribe = adapter.subscribe(reload);
+        unsubscribe = adapter.subscribe(() => reload());
         setState({ status: 'ready', context, adapter, error: null });
       } catch (error) {
         if (active) {

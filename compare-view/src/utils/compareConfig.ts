@@ -6,6 +6,7 @@ import type {
   FilterConjunction,
   FilterOperator,
 } from '../types/compare';
+import { normalizeWidth, readRecordWidths } from './columnWidths';
 
 const CONFIG_KEY = 'compareViewConfig';
 const FILTER_OPERATORS: FilterOperator[] = [
@@ -55,6 +56,8 @@ export function createDefaultCompareConfig(context: CompareContext): CompareView
     selectedRecordIds: [],
     fieldOrderIds: [],
     wrappedFieldIds: [],
+    fieldColumnWidth: null,
+    recordColumnWidths: {},
     hiddenFieldIds: context.primaryFieldId ? [context.primaryFieldId] : [],
     filters: {
       conjunction: 'and',
@@ -72,6 +75,7 @@ export function cloneCompareConfig(config: CompareViewConfig): CompareViewConfig
     hiddenFieldIds: [...config.hiddenFieldIds],
     fieldOrderIds: [...config.fieldOrderIds],
     wrappedFieldIds: [...config.wrappedFieldIds],
+    recordColumnWidths: readRecordWidths(config.recordColumnWidths, new Set(Object.keys(config.recordColumnWidths))),
     filters: {
       conjunction: config.filters.conjunction,
       rules: config.filters.rules.map((rule) => ({ ...rule, value: [...rule.value] })),
@@ -210,6 +214,8 @@ export function readCompareConfig(
     hiddenFieldIds,
     fieldOrderIds,
     wrappedFieldIds,
+    fieldColumnWidth: normalizeWidth(value.fieldColumnWidth, false),
+    recordColumnWidths: readRecordWidths(value.recordColumnWidths, recordIds),
     filters: { conjunction, rules },
     sortRules,
     groupFieldId,
@@ -226,5 +232,10 @@ export function compareConfigs(
   first: CompareViewConfig | null,
   second: CompareViewConfig | null
 ): boolean {
-  return JSON.stringify(first) === JSON.stringify(second);
+  // Object insertion order is not a setting; array order remains significant.
+  const stable = (value: unknown): unknown => Array.isArray(value) ? value.map(stable)
+    : value && typeof value === 'object'
+      ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry]) => [key, stable(entry)]))
+      : value;
+  return JSON.stringify(stable(first)) === JSON.stringify(stable(second));
 }

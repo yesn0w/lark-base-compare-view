@@ -1,281 +1,68 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BaseAdapter } from '../services/baseAdapter';
+import { useEffect, useRef, useState } from 'react';
+import type { BaseAdapter } from '../services/baseAdapter';
 import type { CompareContext, CompareViewConfig } from '../types/compare';
-import {
-  cloneCompareConfig,
-  compareConfigs,
-  createDefaultCompareConfig,
-  makePersistedConfig,
-  readCompareConfig,
-} from '../utils/compareConfig';
+import { createDefaultCompareConfig, readCompareConfig } from '../utils/compareConfig';
 import { loadCompareConfigAccess } from '../utils/configAccess';
-
-interface CompareConfigState {
-  status: 'loading' | 'ready' | 'error';
-  applied: CompareViewConfig | null;
-  draft: CompareViewConfig | null;
-  canSave: boolean;
-  readOnlyReason: 'mobile' | 'permission' | null;
-  saving: boolean;
-  remoteChanged: boolean;
-  error: string | null;
-}
-
-const initialState: CompareConfigState = {
-  status: 'loading',
-  applied: null,
-  draft: null,
-  canSave: false,
-  readOnlyReason: null,
-  saving: false,
-  remoteChanged: false,
-  error: null,
-};
-
-function getSourceKey(context: CompareContext | null): string | null {
-  return context ? `${context.tableId}::${context.viewId ?? 'no-view'}` : null;
-}
-
-function sanitizeConfig(config: CompareViewConfig, context: CompareContext): CompareViewConfig {
-  return (
-    readCompareConfig(makePersistedConfig(config), context) ?? createDefaultCompareConfig(context)
-  );
-}
-
-function getRemoteConfig(data: unknown, context: CompareContext): CompareViewConfig {
-  return readCompareConfig(data, context) ?? createDefaultCompareConfig(context);
-}
+import { ConfigController, ConfigWriteQueue } from '../utils/configController';
+import type { ColumnId } from '../utils/columnWidths';
 
 export function useCompareConfig(adapter: BaseAdapter | null, context: CompareContext | null) {
-  const sourceKey = getSourceKey(context);
-  const contextShapeKey = useMemo(
-    () =>
-      context
-        ? `${sourceKey}::${context.fields.map((field) => field.id).join(',')}::${context.records
-            .map((record) => record.id)
-            .join(',')}`
-        : null,
-    [context, sourceKey]
-  );
-  const [state, setState] = useState<CompareConfigState>(initialState);
-  const stateRef = useRef(state);
-  const loadedSourceKeyRef = useRef<string | null>(null);
+  const sourceKey = context ? `${context.tableId}::${context.viewId ?? 'no-view'}` : null;
+  const controller = useRef<ConfigController | null>(null);
+  const queue = useRef(new ConfigWriteQueue());
+  const [, render] = useState(0);
+  const [access, setAccess] = useState({ status: 'loading' as 'loading' | 'ready' | 'error', canSave: false,
+    readOnlyReason: null as 'mobile' | 'permission' | null });
+  const io = () => ({
+    read: async () => (await adapter!.getPersistentData(context!)).data,
+    write: (data: Record<string, unknown>) => adapter!.setPersistentData(context!, data),
+  });
 
   useEffect(() => {
-    stateRef.current = state;
-  }, [state]);
-
-  const applyRemoteConfig = useCallback((remote: CompareViewConfig) => {
-    setState((current) => {
-      const dirty = !compareConfigs(current.draft, current.applied);
-      if (!dirty || compareConfigs(current.draft, remote)) {
-        return {
-          ...current,
-          status: 'ready',
-          applied: cloneCompareConfig(remote),
-          draft: cloneCompareConfig(remote),
-          remoteChanged: false,
-          error: null,
-        };
-      }
-
-      return {
-        ...current,
-        status: 'ready',
-        applied: cloneCompareConfig(remote),
-        remoteChanged: true,
-        error: null,
-      };
-    });
-  }, []);
-
-  const reloadSharedConfig = useCallback(async () => {
-    if (!adapter || !context) {
-      return;
-    }
-
-    try {
-      const persistent = await adapter.getPersistentData(context);
-      const remote = getRemoteConfig(persistent.data, context);
-      applyRemoteConfig(remote);
-    } catch {
-      setState((current) => ({
-        ...current,
-        error: 'Unable to refresh the shared extension configuration.',
-      }));
-    }
-  }, [adapter, applyRemoteConfig, context]);
-
-  useEffect(() => {
-    if (!adapter || !context || !sourceKey) {
-      loadedSourceKeyRef.current = null;
-      setState(initialState);
-      return;
-    }
-
+    if (!adapter || !context) return;
     let active = true;
-    const sourceChanged = loadedSourceKeyRef.current !== sourceKey;
-
-    if (sourceChanged) {
-      loadedSourceKeyRef.current = sourceKey;
-      setState({ ...initialState, status: 'loading' });
-      void loadCompareConfigAccess(adapter, context)
-        .then(({ data, canSave, readOnlyReason }) => {
-          if (!active) {
-            return;
-          }
-
-          const config = getRemoteConfig(data, context);
-          setState({
-            status: 'ready',
-            applied: cloneCompareConfig(config),
-            draft: cloneCompareConfig(config),
-            canSave,
-            readOnlyReason,
-            saving: false,
-            remoteChanged: false,
-            error: null,
-          });
-        })
-        .catch(() => {
-          if (active) {
-            const config = createDefaultCompareConfig(context);
-            setState({
-              status: 'error',
-              applied: cloneCompareConfig(config),
-              draft: cloneCompareConfig(config),
-              canSave: false,
-              readOnlyReason: null,
-              saving: false,
-              remoteChanged: false,
-              error: 'Unable to read the shared extension configuration.',
-            });
-          }
-        });
-    } else {
-      setState((current) => {
-        if (!current.applied || !current.draft) {
-          return current;
-        }
-
-        return {
-          ...current,
-          applied: sanitizeConfig(current.applied, context),
-          draft: sanitizeConfig(current.draft, context),
-        };
-      });
-    }
-
-    return () => {
-      active = false;
-    };
-  }, [adapter, context, contextShapeKey, sourceKey]);
+    let unsubscribe = () => {};
+    controller.current = null;
+    setAccess({ status: 'loading', canSave: false, readOnlyReason: null });
+    void queue.current.run(() => loadCompareConfigAccess(adapter, context)).then(({ data, canSave, readOnlyReason }) => {
+      if (!active) return;
+      const config = readCompareConfig(data, context) ?? createDefaultCompareConfig(context);
+      controller.current = new ConfigController(context, io(), config, queue.current);
+      unsubscribe = controller.current.subscribe(() => render(n => n + 1));
+      setAccess({ status: 'ready', canSave, readOnlyReason });
+    }).catch(() => { if (active) setAccess({ status: 'error', canSave: false, readOnlyReason: null }); });
+    return () => { active = false; unsubscribe(); controller.current?.dispose(); controller.current = null; };
+  }, [sourceKey]);
 
   useEffect(() => {
-    if (!adapter || !sourceKey) {
-      return () => undefined;
-    }
-
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const unsubscribe = adapter.subscribeToPersistentData(() => {
-      if (timer !== undefined) {
-        clearTimeout(timer);
-      }
-      timer = setTimeout(() => {
-        void reloadSharedConfig();
-      }, 100);
-    });
-
-    return () => {
-      if (timer !== undefined) {
-        clearTimeout(timer);
-      }
-      unsubscribe();
-    };
-  }, [adapter, reloadSharedConfig, sourceKey]);
-
-  const updateDraft = useCallback(
-    (updater: (config: CompareViewConfig) => CompareViewConfig) => {
-      setState((current) => {
-        if (!current.draft) {
-          return current;
-        }
-
-        return { ...current, draft: updater(cloneCompareConfig(current.draft)) };
-      });
-    },
-    []
-  );
-
-  const discard = useCallback(() => {
-    setState((current) =>
-      current.applied
-        ? {
-            ...current,
-            draft: cloneCompareConfig(current.applied),
-            remoteChanged: false,
-          }
-        : current
-    );
-  }, []);
-
-  const reset = useCallback(() => {
-    if (!context) {
-      return;
-    }
-
-    setState((current) => ({
-      ...current,
-      draft: createDefaultCompareConfig(context),
-      remoteChanged: false,
-    }));
-  }, [context]);
-
-  const save = useCallback(async () => {
-    const currentState = stateRef.current;
-    if (
-      !adapter ||
-      !context ||
-      !currentState.draft ||
-      !currentState.canSave ||
-      currentState.saving
-    ) {
-      return false;
-    }
-
-    const next = cloneCompareConfig(currentState.draft);
-    setState((current) => ({ ...current, saving: true, error: null }));
-    try {
-      await adapter.setPersistentData(context, makePersistedConfig(next));
-      setState((current) => ({
-        ...current,
-        status: 'ready',
-        applied: cloneCompareConfig(next),
-        draft: cloneCompareConfig(next),
-        saving: false,
-        remoteChanged: false,
-        error: null,
-      }));
-      return true;
-    } catch {
-      setState((current) => ({
-        ...current,
-        saving: false,
-        error: 'Unable to save the shared extension configuration.',
-      }));
-      return false;
-    }
+    if (adapter && context) controller.current?.updateContext(context, io());
   }, [adapter, context]);
 
-  const isDirty = !compareConfigs(state.draft, state.applied);
+  useEffect(() => {
+    if (!adapter || !sourceKey) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const unsubscribe = adapter.subscribeToPersistentData(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { void controller.current?.reload(); }, 100);
+    });
+    return () => { clearTimeout(timer); unsubscribe(); };
+  }, [adapter, sourceKey]);
 
+  const model = controller.current;
   return {
-    ...state,
-    isDirty,
-    updateDraft,
-    save,
-    discard,
-    reset,
-    reloadSharedConfig,
+    ...access,
+    applied: model?.state.applied ?? null, draft: model?.state.draft ?? null,
+    saving: model?.state.saving ?? false, remoteChanged: model?.state.remoteChanged ?? false,
+    error: model?.state.error ?? null, isDirty: model?.isDirty ?? false,
+    widths: model?.widths ?? { fieldColumnWidth: null, recordColumnWidths: {} },
+    widthSaving: model?.state.widthSaving ?? false, widthError: model?.state.widthError ?? false,
+    hasPendingWidths: Boolean(model?.state.pendingWidths.size),
+    updateDraft: (updater: (config: CompareViewConfig) => CompareViewConfig) => { if (access.canSave) model?.updateDraft(updater); },
+    setWidth: (id: ColumnId, width: number | null) => { if (access.canSave) model?.setWidth(id, width); },
+    retryWidths: () => access.canSave && model ? model.flushWidths() : Promise.resolve(false),
+    restoreWidths: () => model?.restoreWidths(),
+    save: () => access.canSave && model ? model.save() : Promise.resolve(false),
+    discard: () => model?.discard(), reset: () => model?.reset(),
+    reloadSharedConfig: () => model?.reload(),
   };
 }

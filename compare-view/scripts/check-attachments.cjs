@@ -76,8 +76,8 @@ async function main() {
         assert.doesNotMatch(markup, />\\+\\d+</, 'does not collapse images behind a count');
         assert.match(
           markup,
-          /min-width:664px/,
-          'widens the matrix so every thumbnail remains directly visible'
+          /width:640px/,
+          'uses exact default column widths independent of attachment count'
         );
         assert.match(markup, /failed\.png/, 'falls back to a filename when no thumbnail is available');
         assert.match(markup, /guide\.pdf/, 'keeps non-image attachments readable');

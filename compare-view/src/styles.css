@@ -1078,19 +1078,28 @@ select:disabled {
   align-items: center;
   display: flex;
   height: 100%;
-  position: relative;
+  position: static;
 }
 
 .compare-table__resizer {
   background: transparent;
-  bottom: -32px;
+  bottom: 0;
   cursor: col-resize;
   position: absolute;
-  right: -13px;
+  right: 0;
   top: 0;
   touch-action: none;
-  width: 5px;
+  user-select: none;
+  width: 8px;
+  z-index: 8;
 }
+.column-width-value {
+  position: absolute; right: 8px; top: 0; padding: 4px 8px;
+  color: var(--text); background: var(--surface-2); white-space: nowrap;
+  border: 1px solid var(--control-border); pointer-events: none;
+}
+.width-save-status, .width-navigation-warning { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.width-navigation-warning { padding: 8px 12px; color: var(--text); background: var(--surface-2); }
 
 .compare-table__resizer:hover,
 .compare-table__resizer:focus-visible {

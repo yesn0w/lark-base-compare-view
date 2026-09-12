@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent, type PointerEvent } from 'react';
+import { useState, type DragEvent } from 'react';
 import { translate } from '../i18n';
 import type {
   CellValueMap,
@@ -17,15 +17,12 @@ import {
 } from './AttachmentPreviewDialog';
 import { FieldKindIcon } from './FieldKindIcon';
 
-const MIN_FIELD_COLUMN_WIDTH = 140;
-const MAX_FIELD_COLUMN_WIDTH = 420;
-const DEFAULT_FIELD_COLUMN_WIDTH = 200;
-const MIN_RECORD_COLUMN_WIDTH = 220;
-const RESIZE_KEYBOARD_STEP = 16;
-const ATTACHMENT_THUMBNAIL_GAP = 4;
-const CELL_HORIZONTAL_PADDING = 24;
+import { ColumnResizer } from './ColumnResizer';
+import { columnWidth, type WidthSettings, type ColumnId } from '../utils/columnWidths';
 
 interface CompareTableProps {
+  widths?: WidthSettings;
+  onColumnWidthChange?: (id: ColumnId, width: number | null) => void;
   locale: UiLocale;
   fields: CompareField[];
   groups: CompareRecordGroup[];
@@ -58,32 +55,6 @@ function isPreviewableAttachment(
     attachment.mimeType.toLowerCase().startsWith('image/') &&
     Boolean(attachment.thumbnailUrl)
   );
-}
-
-function getRecordColumnWidth(
-  fields: CompareField[],
-  values: CellValueMap,
-  recordId: string,
-  rowHeight: RowHeight
-): number {
-  const thumbnailSize = Math.min(36, Math.max(24, rowHeight - 8));
-  const maxImageCount = fields.reduce((count, field) => {
-    if (field.kind !== 'attachment') {
-      return count;
-    }
-
-    const imageCount = readCellValue(values, field.id, recordId).attachments.filter(
-      isPreviewableAttachment
-    ).length;
-    return Math.max(count, imageCount);
-  }, 0);
-  const attachmentWidth = maxImageCount
-    ? maxImageCount * thumbnailSize +
-      (maxImageCount - 1) * ATTACHMENT_THUMBNAIL_GAP +
-      CELL_HORIZONTAL_PADDING
-    : 0;
-
-  return Math.max(MIN_RECORD_COLUMN_WIDTH, attachmentWidth);
 }
 
 function AttachmentThumbnail({
@@ -163,6 +134,7 @@ function AttachmentCell({
 }
 
 export function CompareTable({
+  widths = { fieldColumnWidth: null, recordColumnWidths: {} }, onColumnWidthChange,
   locale,
   fields,
   groups,
@@ -179,46 +151,23 @@ export function CompareTable({
   onMoveRecordBefore,
 }: CompareTableProps) {
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
-  const [fieldColumnWidth, setFieldColumnWidth] = useState(DEFAULT_FIELD_COLUMN_WIDTH);
+  const [widthPreviews, setWidthPreviews] = useState<Map<ColumnId, number>>(new Map());
+  const widthFor = (id: ColumnId) => widthPreviews.get(id) ?? columnWidth(widths, id);
+  const fieldColumnWidth = widthFor(null);
   const [attachmentPreview, setAttachmentPreview] = useState<AttachmentPreview | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const grouped = groups.some((group) => Boolean(group.label));
   const visibleGroups = groups.filter((group) => !collapsedGroupKeys.has(group.key));
   const records = visibleGroups.flatMap((group) => group.records);
-  const recordColumnWidths = new Map(
-    records.map((record) => [
-      record.id,
-      getRecordColumnWidth(fields, values, record.id, rowHeight),
-    ])
-  );
-
-  const clampFieldColumnWidth = (width: number) =>
-    Math.min(MAX_FIELD_COLUMN_WIDTH, Math.max(MIN_FIELD_COLUMN_WIDTH, width));
-
-  const startResize = (event: PointerEvent<HTMLSpanElement>) => {
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    resizeRef.current = { startX: event.clientX, startWidth: fieldColumnWidth };
-  };
-
-  const continueResize = (event: PointerEvent<HTMLSpanElement>) => {
-    const state = resizeRef.current;
-    if (!state) {
-      return;
-    }
-
-    setFieldColumnWidth(clampFieldColumnWidth(state.startWidth + event.clientX - state.startX));
-  };
-
-  const endResize = (event: PointerEvent<HTMLSpanElement>) => {
-    resizeRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  };
+  const recordColumnWidths = new Map(records.map(record => [record.id, widthFor(record.id)]));
+  const resizer = (id: ColumnId, title: string) => <ColumnResizer
+    label={`${t(id === null ? 'resizeFieldColumn' : 'resizeRecordColumn')}: ${title}`}
+    value={widthFor(id)} record={id !== null} disabled={disabled || !onColumnWidthChange}
+    onPreview={value => setWidthPreviews(current => {
+      const next = new Map(current); if (value === undefined) next.delete(id); else next.set(id, value); return next;
+    })} onCommit={value => onColumnWidthChange?.(id, value)} />;
 
   const finishDrag = () => {
     setDraggingId(null);
@@ -321,6 +270,7 @@ export function CompareTable({
             </svg>
           </button>
         </div>
+        {resizer(recordId, title)}
       </th>
     );
   };
@@ -329,25 +279,7 @@ export function CompareTable({
     <th scope="col" rowSpan={rowSpan} className="compare-table__field-header">
       <div className="compare-table__field-header-inner">
         <span>{t('fieldName')}</span>
-        <span
-          className="compare-table__resizer"
-          role="separator"
-          aria-orientation="vertical"
-          aria-label={t('resizeFieldColumn')}
-          title={t('resizeFieldColumn')}
-          tabIndex={0}
-          onPointerDown={startResize}
-          onPointerMove={continueResize}
-          onPointerUp={endResize}
-          onPointerCancel={endResize}
-          onKeyDown={(event) => {
-            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-              event.preventDefault();
-              const delta = event.key === 'ArrowLeft' ? -RESIZE_KEYBOARD_STEP : RESIZE_KEYBOARD_STEP;
-              setFieldColumnWidth((current) => clampFieldColumnWidth(current + delta));
-            }
-          }}
-        />
+        {resizer(null, t('fieldName'))}
       </div>
     </th>
   );
@@ -364,11 +296,11 @@ export function CompareTable({
           className="compare-table"
           data-grouped={grouped ? 'true' : 'false'}
           style={{
-            minWidth:
+            width:
               fieldColumnWidth +
               records.reduce(
                 (width, record) =>
-                  width + (recordColumnWidths.get(record.id) ?? MIN_RECORD_COLUMN_WIDTH),
+                  width + (recordColumnWidths.get(record.id) ?? 220),
                 0
               ),
           }}
@@ -378,7 +310,7 @@ export function CompareTable({
             {records.map((record) => (
               <col
                 key={record.id}
-                style={{ width: recordColumnWidths.get(record.id) ?? MIN_RECORD_COLUMN_WIDTH }}
+                style={{ width: recordColumnWidths.get(record.id) ?? 220 }}
               />
             ))}
           </colgroup>
